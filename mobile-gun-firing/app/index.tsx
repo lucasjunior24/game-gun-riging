@@ -1,17 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, FlatList, StyleSheet } from "react-native";
 
 import { create_players } from "./game/init_game";
 
 import Rices from "./components/rices";
+import { Player } from "./consts/players";
 
 const Index = () => {
   const data = create_players();
 
+  const [players, setPlayers] = useState<Player[]>(data);
+  function handleSetPlayers(players: Player[]) {
+    setPlayers(players);
+  }
   return (
     <View style={styles.container}>
       <FlatList
-        data={data}
+        data={players}
         renderItem={({ item }) => (
           <View style={styles.parentItem}>
             <View>
@@ -28,7 +33,7 @@ const Index = () => {
         )}
         keyExtractor={(item) => String(item.user_id)}
       />
-      <Rices />
+      <Rices handleSetPlayers={handleSetPlayers} players={players} />
     </View>
   );
 };

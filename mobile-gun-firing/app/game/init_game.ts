@@ -50,7 +50,6 @@ export function pass_player(player_moment: string): string {
   }
   return `${Number(player_moment) + 1}`;
 }
-
 export function create_game(): BangDeparture {
   const game = BangDeparture.getInstance();
   return game;

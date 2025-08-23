@@ -5,7 +5,7 @@ export type RiceOptions =
   | "2"
   | "Cerveja"
   | "Dinamite"
-  | "Flexa"
+  | "Metralhadora"
   | "Flexa";
 
 export type RiceCombination = {
@@ -18,6 +18,6 @@ export const RICES: RiceCombination[] = [
   { rice: 2, show: "2" },
   { rice: 3, show: "Cerveja" },
   { rice: 4, show: "Dinamite" },
-  { rice: 5, show: "Flexa" },
+  { rice: 5, show: "Metralhadora" },
   { rice: 6, show: "Flexa" },
 ];

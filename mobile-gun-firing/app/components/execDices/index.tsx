@@ -4,7 +4,6 @@ import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
 import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import Shoot from "../shoot";
 
 interface RicesProps {
   handleSetPlayers(players: Player[]): void;
@@ -15,7 +14,6 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
   const [diceOne, setDiceOne] = useState<RiceCombination | undefined>();
   const [diceTwo, setDiceTwo] = useState<RiceCombination | undefined>();
   const [diceTree, setDiceTree] = useState<RiceCombination | undefined>();
-  const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
   function passPlayer() {
     setPlayerMoment(pass_player(playerMoment));
@@ -40,21 +38,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     });
   }
 
-  function runMetralhadora() {
+  function exeDices() {
     const players_now = players.map((p) => {
-      if (p.user_id === Number(playerMoment)) {
-        return p;
-      }
       if (p.character && p.character.bullet) {
         p.character.bullet -= 1;
       }
       return p;
     });
     handleSetPlayers(players_now);
-  }
-  function exeDices() {
-    runMetralhadora();
-    setOpenModal(true);
   }
   return (
     <View style={styles.container}>
@@ -153,16 +144,6 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
             </Pressable>
           </View>
         </View>
-      </View>
-      <View>
-        <Shoot
-          isVisible={openModal}
-          onClose={() => setOpenModal(!openModal)}
-          playerMoment={playerMoment}
-          players={players}
-        >
-          <View style={styles.card}></View>
-        </Shoot>
       </View>
     </View>
   );
