@@ -20,8 +20,8 @@ export class BangDeparture {
     player_of_the_moment: number,
     status: GameStatus = "Running"
   ) {
-    this.users = users; // 'this' refers to the current instance of the class
-    console.log("criando class");
+    this.users = users;
+
     this.player_of_the_moment = player_of_the_moment;
     this.status = status;
   }
