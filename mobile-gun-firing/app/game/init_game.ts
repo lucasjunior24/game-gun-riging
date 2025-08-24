@@ -17,6 +17,7 @@ export function create_players(): Player[] {
       user_name: `User ${i + 1}`,
       character: c,
       identity: identitys_list[i],
+      arrow: 0,
     };
     return new_player;
   });
@@ -53,4 +54,12 @@ export function pass_player(player_moment: string): string {
 export function create_game(): BangDeparture {
   const game = BangDeparture.getInstance();
   return game;
+}
+
+export function get_player_by_user(user: number[], players: Player[]) {
+  return players.filter((p) => {
+    if (user.find((user) => user === p.user_id)) {
+      return p;
+    }
+  });
 }

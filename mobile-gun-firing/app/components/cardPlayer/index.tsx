@@ -1,12 +1,12 @@
 import { View, Text, StyleSheet } from "react-native";
-import { PropsWithChildren } from "react";
+
 import { Player } from "@/app/consts/players";
 import { Image, useImage } from "expo-image";
-type ShootProps = PropsWithChildren<{
+type CardPlayerProps = {
   player: Player;
-}>;
+};
 
-export default function CardPlayer({ player }: ShootProps) {
+export default function CardPlayer({ player }: CardPlayerProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 800,
     onError(error) {

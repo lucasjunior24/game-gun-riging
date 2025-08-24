@@ -1,12 +1,20 @@
 import { View, Text, StyleSheet } from "react-native";
-import { PropsWithChildren } from "react";
-import { Player } from "@/app/consts/players";
 import { Image, useImage } from "expo-image";
-type ShootProps = PropsWithChildren<{
-  player: Player;
-}>;
 
-export default function CardShoot({ player }: ShootProps) {
+import { Player } from "@/app/consts/players";
+import { ButtonIcon } from "../buttonIcon";
+
+type ShootProps = {
+  player: Player;
+  shoots: number;
+  handleBullet: (player: Player) => void;
+};
+
+export default function CardShoot({
+  player,
+  shoots,
+  handleBullet,
+}: ShootProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 800,
     onError(error) {
@@ -17,6 +25,7 @@ export default function CardShoot({ player }: ShootProps) {
   if (!image) {
     return <Text>Image is loading...</Text>;
   }
+
   return (
     <View style={styles.parentItem}>
       <View>
@@ -30,12 +39,20 @@ export default function CardShoot({ player }: ShootProps) {
         )}
       </View>
       <View style={styles.player}>
-        <Text style={styles.parentTitle}>
-          {player.user_name} - {player.identity}
-        </Text>
-        <Text style={styles.character}>
-          {player.character?.character} - {player.character?.bullet}
-        </Text>
+        <View style={{ width: 180 }}>
+          <Text style={styles.parentTitle}>
+            {player.user_name} - {player.identity}
+          </Text>
+          <Text style={styles.character}>
+            {player.character?.character} - {player.character?.bullet}
+          </Text>
+        </View>
+        <View style={{ width: 40 }}>
+          <ButtonIcon
+            onPress={() => handleBullet(player)}
+            text={` + ${shoots} `}
+          />
+        </View>
       </View>
     </View>
   );
@@ -61,6 +78,7 @@ const styles = StyleSheet.create({
   player: {
     width: "100%",
     paddingLeft: 15,
+    flexDirection: "row",
   },
   character: {
     fontSize: 14,

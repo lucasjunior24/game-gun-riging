@@ -1,5 +1,5 @@
 import { Player } from "@/app/consts/players";
-import { RiceCombination } from "@/app/consts/dice";
+import { DiceCombination } from "@/app/consts/dice";
 import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
 import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";
@@ -11,9 +11,9 @@ interface RicesProps {
 }
 const Rices = ({ handleSetPlayers, players }: RicesProps) => {
   const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
-  const [diceOne, setDiceOne] = useState<RiceCombination | undefined>();
-  const [diceTwo, setDiceTwo] = useState<RiceCombination | undefined>();
-  const [diceTree, setDiceTree] = useState<RiceCombination | undefined>();
+  const [diceOne, setDiceOne] = useState<DiceCombination | undefined>();
+  const [diceTwo, setDiceTwo] = useState<DiceCombination | undefined>();
+  const [diceTree, setDiceTree] = useState<DiceCombination | undefined>();
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
   function passPlayer() {
     setPlayerMoment(pass_player(playerMoment));
@@ -23,7 +23,6 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     setTotalDiceRolls(0);
   }
   function playAllRice() {
-    console.log("play all rices");
     if (diceOne?.show !== "Dinamite") {
       setDiceOne(play_dice());
     }

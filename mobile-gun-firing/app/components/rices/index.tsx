@@ -26,8 +26,6 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     setTotalDiceRolls(0);
   }
   function playAllRice() {
-    console.log("play all rices");
-    console.log(diceOne?.locked);
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
     }
@@ -55,7 +53,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     handleSetPlayers(players_now);
   }
   function exeDices() {
-    runMetralhadora();
+    // runMetralhadora();
     setOpenModal(true);
   }
   const sumShoots = sum_shoots(diceOne, diceTwo, diceTree);
@@ -154,7 +152,9 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
           playerMoment={playerMoment}
           players={players}
           shoots={sumShoots}
-        ></Shoot>
+          handleSetPlayers={handleSetPlayers}
+          passPlayer={passPlayer}
+        />
       </View>
     </View>
   );

@@ -6,14 +6,15 @@ import {
   StyleSheet,
   FlatList,
 } from "react-native";
-import { PropsWithChildren, useMemo } from "react";
+import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Player } from "@/app/consts/players";
 import { players_to_shot } from "@/app/game/shoot";
 
 import { ButtonBase } from "../buttonBase";
-import CardPlayer from "../cardPlayer";
+
 import { DiceCombinationUndefined } from "@/app/consts/dice";
+import CardShoot from "../cardShoot";
 
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
@@ -21,6 +22,8 @@ type ShootProps = PropsWithChildren<{
   playerMoment: string;
   players: Player[];
   shoots: DiceCombinationUndefined[];
+  handleSetPlayers(players: Player[]): void;
+  passPlayer(): void;
 }>;
 
 export default function Shoot({
@@ -29,9 +32,11 @@ export default function Shoot({
   playerMoment,
   players,
   shoots,
+  handleSetPlayers,
+  passPlayer,
 }: ShootProps) {
   const optionsOneShoot = players_to_shot(playerMoment, players.length, 1);
-  const optionsTwoShoot = players_to_shot(playerMoment, players.length, 2);
+  // const optionsTwoShoot = players_to_shot(playerMoment, players.length, 2);
   const playersToShot = useMemo(() => {
     return players.filter((p) => {
       if (optionsOneShoot.find((user) => user === p.user_id)) {
@@ -39,9 +44,38 @@ export default function Shoot({
       }
     });
   }, [optionsOneShoot, players]);
-  console.log(optionsTwoShoot);
-  const shotOneDistance = shoots.filter((s) => s?.show === "1").length;
-  const shotTwoDistance = shoots.filter((s) => s?.show === "2").length;
+  console.log("--------------------------");
+  const shotOneDistance = useMemo(() => {
+    return shoots.filter((s) => s?.show === "1").length;
+  }, [shoots]);
+  console.log("shotOneDistance", shotOneDistance);
+  const [bullet, setBullet] = useState(shotOneDistance);
+  useEffect(() => {
+    if (shotOneDistance) {
+      setBullet(shotOneDistance);
+    }
+  }, [shotOneDistance]);
+  // const shotTwoDistance = shoots.filter((s) => s?.show === "2").length;
+
+  console.log("bullet", bullet);
+
+  function handleBullet(player: Player) {
+    setBullet((state) => {
+      if (state > 0) {
+        const new_players = players.map((p) => {
+          if (p.user_id === player.user_id && p.character?.bullet) {
+            p.character.bullet -= 1;
+            return p;
+          }
+          return p;
+        });
+        handleSetPlayers(new_players);
+        return state - 1;
+      }
+      return state;
+    });
+  }
+
   return (
     <View>
       <Modal animationType="slide" transparent visible={isVisible} focusable>
@@ -55,17 +89,22 @@ export default function Shoot({
           </View>
           <View>
             <Text style={styles.title}>1 Distancia = {shotOneDistance}</Text>
-            <Text style={styles.title}>2 Distancia = {shotTwoDistance}</Text>
+            {/* <Text style={styles.title}>2 Distancia = {shotTwoDistance}</Text> */}
           </View>
           <View>
-            {playersToShot && (
-              <FlatList
-                data={playersToShot}
-                renderItem={({ item }) => <CardPlayer player={item} />}
-                keyExtractor={(item) => String(item.user_id)}
-              />
-            )}
-            <ButtonBase onPress={() => {}} text="Executar" />
+            <FlatList
+              data={playersToShot}
+              renderItem={({ item }) => (
+                <CardShoot
+                  player={item}
+                  shoots={bullet}
+                  handleBullet={handleBullet}
+                />
+              )}
+              keyExtractor={(item) => String(item.user_id)}
+            />
+
+            <ButtonBase onPress={onClose} text="Executar" />
           </View>
         </View>
       </Modal>
