@@ -26,7 +26,7 @@ export function block_dinamite(dice: DiceCombination) {
   return dice;
 }
 
-export function locked_rice(
+export function locked_dice(
   state: DiceCombinationUndefined
 ): DiceCombinationUndefined {
   if (state) {

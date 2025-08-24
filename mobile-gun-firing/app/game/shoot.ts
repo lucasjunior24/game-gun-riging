@@ -50,8 +50,3 @@ export function players_to_shot(
   const playersArray = Array.from(players);
   return playersArray;
 }
-
-// const players_one = players_to_shot("2", 8, 1);
-// const players_two = players_to_shot("2", 8, 2);
-// console.log(players_one);
-// console.log(players_two);

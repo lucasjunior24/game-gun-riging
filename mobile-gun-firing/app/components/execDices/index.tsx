@@ -5,11 +5,11 @@ import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 
-interface RicesProps {
+interface DicesProps {
   handleSetPlayers(players: Player[]): void;
   players: Player[];
 }
-const Rices = ({ handleSetPlayers, players }: RicesProps) => {
+const ShowDices = ({ handleSetPlayers, players }: DicesProps) => {
   const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
   const [diceOne, setDiceOne] = useState<DiceCombination | undefined>();
   const [diceTwo, setDiceTwo] = useState<DiceCombination | undefined>();
@@ -22,7 +22,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     setDiceTree(undefined);
     setTotalDiceRolls(0);
   }
-  function playAllRice() {
+  function playAllDices() {
     if (diceOne?.show !== "Dinamite") {
       setDiceOne(play_dice());
     }
@@ -58,14 +58,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
           </View>
           <View style={styles.card}>
             <Pressable
-              onPress={playAllRice}
+              onPress={playAllDices}
               style={[
                 styles.button,
                 { backgroundColor: totalDiceRolls === 3 ? "red" : "blue" },
               ]}
               disabled={totalDiceRolls === 3}
             >
-              <Text style={styles.text}>Play All Rice</Text>
+              <Text style={styles.text}>Play All Dices</Text>
             </Pressable>
           </View>
           <Text style={styles.parentTitle}>
@@ -76,7 +76,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
               onPress={exeDices}
               style={[styles.button, { backgroundColor: "green" }]}
             >
-              <Text style={styles.text}>Execute Rices</Text>
+              <Text style={styles.text}>Execute Dices</Text>
             </Pressable>
           </View>
         </View>
@@ -147,7 +147,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     </View>
   );
 };
-export default Rices;
+export default ShowDices;
 
 const styles = StyleSheet.create({
   container: {

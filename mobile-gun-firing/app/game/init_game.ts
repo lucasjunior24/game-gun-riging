@@ -44,7 +44,6 @@ export function get_player_of_the_moment(): string {
   return game.get_player_of_the_moment();
 }
 export function pass_player(player_moment: string): string {
-  console.log("player_moment", player_moment);
   const all_players = get_users_ids();
   if (all_players.length === Number(player_moment)) {
     return "1";

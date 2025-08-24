@@ -27,7 +27,12 @@ export default function CardShoot({
   }
 
   return (
-    <View style={styles.parentItem}>
+    <View
+      style={[
+        styles.parentItem,
+        { backgroundColor: player.identity === "Xerife" ? "yellow" : "white" },
+      ]}
+    >
       <View>
         {player.character?.avatar && (
           <Image

@@ -1,18 +1,38 @@
 import React, { useState } from "react";
 import { Player } from "@/app/consts/players";
-import { DiceCombinationUndefined } from "@/app/consts/dice";
-import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
-import { locked_rice, play_dice, sum_shoots } from "@/app/game/play_dice";
+import { DiceCombinationUndefined, DiceOptions } from "@/app/consts/dice";
+import { pass_player } from "@/app/game/init_game";
+import { locked_dice, play_dice, sum_shoots } from "@/app/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Shoot from "../shoot";
 
 interface RicesProps {
-  handleSetPlayers(players: Player[]): void;
   players: Player[];
+  playerMoment: string;
+  handleSetPlayers(players: Player[]): void;
+  setPlayerMoment: (user_id: string) => void;
 }
 
-const Rices = ({ handleSetPlayers, players }: RicesProps) => {
-  const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
+function getEmogiDice(dice: DiceOptions | undefined) {
+  switch (dice) {
+    case "Dinamite":
+      return "🧨";
+    case "Cerveja":
+      return "🍺";
+    case "Flexa":
+      return "🏹";
+    case "Metralhadora":
+      return "ᡕᠵ╤ᡁ᠊デ━";
+    default:
+      return dice;
+  }
+}
+const Dices = ({
+  handleSetPlayers,
+  players,
+  playerMoment,
+  setPlayerMoment,
+}: RicesProps) => {
   const [diceOne, setDiceOne] = useState<DiceCombinationUndefined>();
   const [diceTwo, setDiceTwo] = useState<DiceCombinationUndefined>();
   const [diceTree, setDiceTree] = useState<DiceCombinationUndefined>();
@@ -25,6 +45,8 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     setDiceTree(undefined);
     setTotalDiceRolls(0);
   }
+  console.log("playerMoment", playerMoment);
+  console.log();
   function playAllRice() {
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
@@ -56,12 +78,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     // runMetralhadora();
     setOpenModal(true);
   }
+  const player = players.filter((p) => p.user_id === Number(playerMoment))[0];
   const sumShoots = sum_shoots(diceOne, diceTwo, diceTree);
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
         <View style={styles.card}>
-          <Text style={styles.parentTitle}>Jogador atual: {playerMoment}</Text>
+          <Text style={styles.parentTitle}>Jogador atual</Text>
+          <Text style={styles.parentTitle}>{player.user_name}</Text>
           <View style={styles.card}>
             <Pressable onPress={passPlayer} style={styles.button}>
               <Text style={styles.text}>Pass Player</Text>
@@ -95,9 +119,8 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
           <Text style={styles.parentTitle}>Dados travados</Text>
 
           <View style={styles.dices}>
-            <Text style={styles.parentTitle}> 🎲 </Text>
             <Pressable
-              onPress={() => setDiceOne((state) => locked_rice(state))}
+              onPress={() => setDiceOne((state) => locked_dice(state))}
               style={[
                 styles.buttonDice,
                 {
@@ -105,15 +128,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
                 },
               ]}
             >
-              <Text style={styles.text}>{diceOne?.locked ? "Sim" : "Não"}</Text>
+              <Text style={styles.text}> 🎲 </Text>
             </Pressable>
-            <Text style={styles.parentTitle}>{diceOne?.show}</Text>
+            <Text style={styles.icon}> {getEmogiDice(diceOne?.show)}</Text>
           </View>
 
           <View style={styles.dices}>
-            <Text style={styles.parentTitle}> 🎲 </Text>
             <Pressable
-              onPress={() => setDiceTwo((state) => locked_rice(state))}
+              onPress={() => setDiceTwo((state) => locked_dice(state))}
               style={[
                 styles.buttonDice,
                 {
@@ -121,15 +143,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
                 },
               ]}
             >
-              <Text style={styles.text}>{diceTwo?.locked ? "Sim" : "Não"}</Text>
+              <Text style={styles.text}> 🎲 </Text>
             </Pressable>
-            <Text style={styles.parentTitle}> {diceTwo?.show}</Text>
+            <Text style={styles.icon}> {getEmogiDice(diceTwo?.show)}</Text>
           </View>
 
           <View style={styles.dices}>
-            <Text style={styles.parentTitle}> 🎲 </Text>
             <Pressable
-              onPress={() => setDiceTree((state) => locked_rice(state))}
+              onPress={() => setDiceTree((state) => locked_dice(state))}
               style={[
                 styles.buttonDice,
                 {
@@ -137,11 +158,9 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
                 },
               ]}
             >
-              <Text style={styles.text}>
-                {diceTree?.locked ? "Sim" : "Não"}
-              </Text>
+              <Text style={styles.text}> 🎲 </Text>
             </Pressable>
-            <Text style={styles.parentTitle}> {diceTree?.show}</Text>
+            <Text style={styles.icon}> {getEmogiDice(diceTree?.show)}</Text>
           </View>
         </View>
       </View>
@@ -159,7 +178,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     </View>
   );
 };
-export default Rices;
+export default Dices;
 
 const styles = StyleSheet.create({
   container: {
@@ -193,6 +212,10 @@ const styles = StyleSheet.create({
   },
   parentTitle: {
     fontSize: 18,
+    fontWeight: "bold",
+  },
+  icon: {
+    fontSize: 24,
     fontWeight: "bold",
   },
   childItem: {

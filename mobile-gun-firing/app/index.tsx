@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 
-import { create_players } from "./game/init_game";
-import Rices from "./components/rices";
+import { create_players, get_player_of_the_moment } from "./game/init_game";
+import Dices from "./components/dices";
 import { Player } from "./consts/players";
 import CardPlayer from "./components/cardPlayer";
 
@@ -13,15 +13,25 @@ const Index = () => {
   function handleSetPlayers(players: Player[]) {
     setPlayers(players);
   }
-
+  const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
+  function handlePlayerMoment(user_id: string) {
+    setPlayerMoment(user_id);
+  }
   return (
     <View style={styles.container}>
       <FlatList
         data={players}
-        renderItem={({ item }) => <CardPlayer player={item} />}
+        renderItem={({ item }) => (
+          <CardPlayer player={item} playerMoment={playerMoment} />
+        )}
         keyExtractor={(item) => String(item.user_id)}
       />
-      <Rices handleSetPlayers={handleSetPlayers} players={players} />
+      <Dices
+        handleSetPlayers={handleSetPlayers}
+        players={players}
+        setPlayerMoment={handlePlayerMoment}
+        playerMoment={playerMoment}
+      />
     </View>
   );
 };

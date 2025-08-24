@@ -4,9 +4,10 @@ import { Player } from "@/app/consts/players";
 import { Image, useImage } from "expo-image";
 type CardPlayerProps = {
   player: Player;
+  playerMoment: string;
 };
 
-export default function CardPlayer({ player }: CardPlayerProps) {
+export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 800,
     onError(error) {
@@ -18,7 +19,17 @@ export default function CardPlayer({ player }: CardPlayerProps) {
     return <Text>Image is loading...</Text>;
   }
   return (
-    <View style={styles.parentItem}>
+    <View
+      style={[
+        styles.parentItem,
+        styles.borderedBox,
+        {
+          backgroundColor: player.identity === "Xerife" ? "#eecb02" : "white",
+          borderColor:
+            Number(playerMoment) === player.user_id ? "green" : "white",
+        },
+      ]}
+    >
       <View>
         {player.character?.avatar && (
           <Image
@@ -30,12 +41,19 @@ export default function CardPlayer({ player }: CardPlayerProps) {
         )}
       </View>
       <View style={styles.player}>
-        <Text style={styles.parentTitle}>
-          {player.user_name} - {player.identity}
-        </Text>
-        <Text style={styles.character}>
-          {player.character?.character} - {player.character?.bullet}
-        </Text>
+        <View>
+          <Text style={styles.parentTitle}>
+            {player.user_name} - {player.identity}
+          </Text>
+          <Text style={styles.character}>
+            {player.character?.character} - {player.character?.bullet}
+          </Text>
+        </View>
+        {Number(playerMoment) === player.user_id && (
+          <View style={[styles.borderedBox, styles.box]}>
+            <Text style={styles.boxIcon}>🎮</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -56,14 +74,32 @@ const styles = StyleSheet.create({
   image: {
     height: 60,
     width: 60,
-    backgroundColor: "#0553",
   },
   player: {
-    width: "100%",
-    paddingLeft: 15,
+    width: "80%",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 15,
   },
   character: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  borderedBox: {
+    borderWidth: 2,
+    borderRadius: 10,
+    borderStyle: "dashed",
+    backgroundColor: "lightgray",
+  },
+  box: {
+    backgroundColor: "#3efa05ef",
+    width: 48,
+    height: 48,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+  },
+  boxIcon: {
+    fontSize: 30,
   },
 });
