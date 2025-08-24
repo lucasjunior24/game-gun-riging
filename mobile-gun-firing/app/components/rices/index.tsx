@@ -1,8 +1,8 @@
-import { Player } from "@/app/consts/players";
-import { RiceCombination } from "@/app/consts/rice";
-import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
-import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";
+import { Player } from "@/app/consts/players";
+import { DiceCombinationUndefined } from "@/app/consts/dice";
+import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
+import { locked_rice, play_dice, sum_shoots } from "@/app/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Shoot from "../shoot";
 
@@ -10,11 +10,12 @@ interface RicesProps {
   handleSetPlayers(players: Player[]): void;
   players: Player[];
 }
+
 const Rices = ({ handleSetPlayers, players }: RicesProps) => {
   const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
-  const [diceOne, setDiceOne] = useState<RiceCombination | undefined>();
-  const [diceTwo, setDiceTwo] = useState<RiceCombination | undefined>();
-  const [diceTree, setDiceTree] = useState<RiceCombination | undefined>();
+  const [diceOne, setDiceOne] = useState<DiceCombinationUndefined>();
+  const [diceTwo, setDiceTwo] = useState<DiceCombinationUndefined>();
+  const [diceTree, setDiceTree] = useState<DiceCombinationUndefined>();
   const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
   function passPlayer() {
@@ -26,13 +27,14 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
   }
   function playAllRice() {
     console.log("play all rices");
-    if (diceOne?.show !== "Dinamite") {
+    console.log(diceOne?.locked);
+    if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
     }
-    if (diceTwo?.show !== "Dinamite") {
+    if (diceTwo?.locked !== true) {
       setDiceTwo(play_dice());
     }
-    if (diceTree?.show !== "Dinamite") {
+    if (diceTree?.locked !== true) {
       setDiceTree(play_dice());
     }
     setTotalDiceRolls((state) => {
@@ -56,6 +58,7 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
     runMetralhadora();
     setOpenModal(true);
   }
+  const sumShoots = sum_shoots(diceOne, diceTwo, diceTree);
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
@@ -91,66 +94,56 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
           </View>
         </View>
         <View style={styles.card}>
-          <Text style={styles.parentTitle}>Jogar Dados</Text>
+          <Text style={styles.parentTitle}>Dados travados</Text>
 
-          <View style={styles.card}>
+          <View style={styles.dices}>
+            <Text style={styles.parentTitle}> 🎲 </Text>
+            <Pressable
+              onPress={() => setDiceOne((state) => locked_rice(state))}
+              style={[
+                styles.buttonDice,
+                {
+                  backgroundColor: diceOne?.locked ? "red" : "blue",
+                },
+              ]}
+            >
+              <Text style={styles.text}>{diceOne?.locked ? "Sim" : "Não"}</Text>
+            </Pressable>
             <Text style={styles.parentTitle}>{diceOne?.show}</Text>
-            <Pressable
-              onPress={() => setDiceOne(play_dice())}
-              style={styles.button}
-            >
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    backgroundColor:
-                      diceOne?.show === "Dinamite" ? "red" : "blue",
-                  },
-                ]}
-              >
-                Dado 1{" "}
-              </Text>
-            </Pressable>
           </View>
 
-          <View style={styles.card}>
-            <Text style={styles.parentTitle}>{diceTwo?.show}</Text>
+          <View style={styles.dices}>
+            <Text style={styles.parentTitle}> 🎲 </Text>
             <Pressable
-              onPress={() => setDiceTwo(play_dice())}
-              style={styles.button}
+              onPress={() => setDiceTwo((state) => locked_rice(state))}
+              style={[
+                styles.buttonDice,
+                {
+                  backgroundColor: diceTwo?.locked ? "red" : "blue",
+                },
+              ]}
             >
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    backgroundColor:
-                      diceTwo?.show === "Dinamite" ? "red" : "blue",
-                  },
-                ]}
-              >
-                Dado 2
-              </Text>
+              <Text style={styles.text}>{diceTwo?.locked ? "Sim" : "Não"}</Text>
             </Pressable>
+            <Text style={styles.parentTitle}> {diceTwo?.show}</Text>
           </View>
 
-          <View style={styles.card}>
+          <View style={styles.dices}>
+            <Text style={styles.parentTitle}> 🎲 </Text>
+            <Pressable
+              onPress={() => setDiceTree((state) => locked_rice(state))}
+              style={[
+                styles.buttonDice,
+                {
+                  backgroundColor: diceTree?.locked ? "red" : "blue",
+                },
+              ]}
+            >
+              <Text style={styles.text}>
+                {diceTree?.locked ? "Sim" : "Não"}
+              </Text>
+            </Pressable>
             <Text style={styles.parentTitle}> {diceTree?.show}</Text>
-            <Pressable
-              onPress={() => setDiceTree(play_dice())}
-              style={styles.button}
-            >
-              <Text
-                style={[
-                  styles.text,
-                  {
-                    backgroundColor:
-                      diceTree?.show === "Dinamite" ? "red" : "blue",
-                  },
-                ]}
-              >
-                Dado 3
-              </Text>
-            </Pressable>
           </View>
         </View>
       </View>
@@ -160,9 +153,8 @@ const Rices = ({ handleSetPlayers, players }: RicesProps) => {
           onClose={() => setOpenModal(!openModal)}
           playerMoment={playerMoment}
           players={players}
-        >
-          <View style={styles.card}></View>
-        </Shoot>
+          shoots={sumShoots}
+        ></Shoot>
       </View>
     </View>
   );
@@ -181,6 +173,18 @@ const styles = StyleSheet.create({
   },
   card: {
     paddingVertical: 15,
+    width: "50%",
+  },
+  dices: {
+    flexDirection: "row",
+    gap: 10,
+    paddingBottom: 5,
+  },
+  buttonDice: {
+    backgroundColor: "blue",
+    borderRadius: 4,
+    padding: 5,
+    width: 40,
   },
   parentItem: {
     padding: 10,

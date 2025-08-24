@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
+import { View, FlatList, StyleSheet } from "react-native";
 
 import { create_players } from "./game/init_game";
-
 import Rices from "./components/rices";
 import { Player } from "./consts/players";
+import CardPlayer from "./components/cardPlayer";
 
 const Index = () => {
   const data = create_players();
@@ -13,24 +13,12 @@ const Index = () => {
   function handleSetPlayers(players: Player[]) {
     setPlayers(players);
   }
+
   return (
     <View style={styles.container}>
       <FlatList
         data={players}
-        renderItem={({ item }) => (
-          <View style={styles.parentItem}>
-            <View>
-              <Text style={styles.parentTitle}>{item.user_name}</Text>
-              <Text style={styles.parentTitle}>{item.identity}</Text>
-            </View>
-            <View>
-              <Text style={styles.parentTitle}>
-                {item.character?.character}
-              </Text>
-              <Text style={styles.parentTitle}>{item.character?.bullet}</Text>
-            </View>
-          </View>
-        )}
+        renderItem={({ item }) => <CardPlayer player={item} />}
         keyExtractor={(item) => String(item.user_id)}
       />
       <Rices handleSetPlayers={handleSetPlayers} players={players} />
@@ -60,9 +48,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   parentTitle: {
-    fontSize: 18,
+    fontSize: 15,
     fontWeight: "bold",
   },
+
   childItem: {
     fontSize: 16,
     marginLeft: 20,
@@ -72,9 +61,5 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     padding: 5,
     width: 150,
-  },
-  text: {
-    fontSize: 16,
-    color: "#fff",
   },
 });

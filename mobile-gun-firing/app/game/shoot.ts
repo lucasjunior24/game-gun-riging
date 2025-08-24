@@ -38,7 +38,7 @@ export function shoot_to_the_left(
 export function players_to_shot(
   current_player: string,
   total_players: number,
-  dice: number
+  dice: 1 | 2
 ) {
   const one_short_right = shoot_to_the_right(
     current_player,
@@ -46,12 +46,12 @@ export function players_to_shot(
     dice
   );
   const one_short_left = shoot_to_the_left(current_player, total_players, dice);
-  const players = new Set([one_short_right, one_short_left]);
+  const players = new Set([one_short_left, one_short_right]);
   const playersArray = Array.from(players);
   return playersArray;
 }
 
-const players_one = players_to_shot("4", 4, 1);
-const players_two = players_to_shot("4", 4, 2);
-console.log(players_one);
-console.log(players_two);
+// const players_one = players_to_shot("2", 8, 1);
+// const players_two = players_to_shot("2", 8, 2);
+// console.log(players_one);
+// console.log(players_two);

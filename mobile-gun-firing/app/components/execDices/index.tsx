@@ -1,5 +1,5 @@
 import { Player } from "@/app/consts/players";
-import { RiceCombination } from "@/app/consts/rice";
+import { RiceCombination } from "@/app/consts/dice";
 import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
 import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";

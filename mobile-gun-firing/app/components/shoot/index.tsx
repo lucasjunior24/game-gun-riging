@@ -10,31 +10,38 @@ import { PropsWithChildren, useMemo } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Player } from "@/app/consts/players";
 import { players_to_shot } from "@/app/game/shoot";
-import CardShoot from "../cardShoot";
+
 import { ButtonBase } from "../buttonBase";
+import CardPlayer from "../cardPlayer";
+import { DiceCombinationUndefined } from "@/app/consts/dice";
 
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
   playerMoment: string;
   players: Player[];
+  shoots: DiceCombinationUndefined[];
 }>;
 
 export default function Shoot({
   isVisible,
-  children,
   onClose,
   playerMoment,
   players,
+  shoots,
 }: ShootProps) {
-  const optionshoort = players_to_shot(playerMoment, players.length, 1);
+  const optionsOneShoot = players_to_shot(playerMoment, players.length, 1);
+  const optionsTwoShoot = players_to_shot(playerMoment, players.length, 2);
   const playersToShot = useMemo(() => {
     return players.filter((p) => {
-      if (optionshoort.find((user) => user === p.user_id)) {
+      if (optionsOneShoot.find((user) => user === p.user_id)) {
         return p;
       }
     });
-  }, [optionshoort, players]);
+  }, [optionsOneShoot, players]);
+  console.log(optionsTwoShoot);
+  const shotOneDistance = shoots.filter((s) => s?.show === "1").length;
+  const shotTwoDistance = shoots.filter((s) => s?.show === "2").length;
   return (
     <View>
       <Modal animationType="slide" transparent visible={isVisible} focusable>
@@ -47,12 +54,17 @@ export default function Shoot({
             </Pressable>
           </View>
           <View>
-            <FlatList
-              data={playersToShot}
-              renderItem={({ item }) => <CardShoot player={item} />}
-              keyExtractor={(item) => String(item.user_id)}
-              style={{ backgroundColor: "red", flex: 1 }}
-            />
+            <Text style={styles.title}>1 Distancia = {shotOneDistance}</Text>
+            <Text style={styles.title}>2 Distancia = {shotTwoDistance}</Text>
+          </View>
+          <View>
+            {playersToShot && (
+              <FlatList
+                data={playersToShot}
+                renderItem={({ item }) => <CardPlayer player={item} />}
+                keyExtractor={(item) => String(item.user_id)}
+              />
+            )}
             <ButtonBase onPress={() => {}} text="Executar" />
           </View>
         </View>

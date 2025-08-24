@@ -6,7 +6,7 @@ type ShootProps = PropsWithChildren<{
   player: Player;
 }>;
 
-export default function CardShoot({ player }: ShootProps) {
+export default function CardPlayer({ player }: ShootProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 800,
     onError(error) {
