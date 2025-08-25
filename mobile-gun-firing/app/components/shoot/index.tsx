@@ -28,8 +28,11 @@ function definirTiros(
 ): number {
   if (state > 0) {
     const new_players = players.map((p) => {
-      if (p.user_id === player.user_id && p.character?.bullet) {
-        p.character.bullet -= 1;
+      if (p.user_id === player.user_id && p.bullet) {
+        p.bullet -= 1;
+        if (p.bullet === 0) {
+          p.is_alive = false;
+        }
         return p;
       }
       return p;
@@ -47,59 +50,69 @@ export default function Shoot({
   players,
   shoots,
   handleSetPlayers,
-  passPlayer,
 }: ShootProps) {
-  const optionsOneShoot = players_to_shot(playerMoment, players.length, 1);
-  const optionsTwoShoot = players_to_shot(playerMoment, players.length, 2);
+  const livePlayers = players.filter((p) => p.is_alive);
+
+  const optionsOneShoot = players_to_shot(playerMoment, livePlayers.length, 1);
+  const optionsTwoShoot = players_to_shot(playerMoment, livePlayers.length, 2);
   const playersOneShot = useMemo(() => {
-    return players.filter((p) => {
+    return livePlayers.filter((p) => {
       if (optionsOneShoot.find((user) => user === p.user_id)) {
         return p;
       }
     });
-  }, [optionsOneShoot, players]);
+  }, [optionsOneShoot, livePlayers]);
 
   const playersTwoShot = useMemo(() => {
-    return players.filter((p) => {
+    return livePlayers.filter((p) => {
       if (optionsTwoShoot.find((user) => user === p.user_id)) {
         return p;
       }
     });
-  }, [optionsTwoShoot, players]);
+  }, [optionsTwoShoot, livePlayers]);
 
-  const shotOneDistance = useMemo(() => {
+  const oneShotTotal = useMemo(() => {
     return shoots.filter((s) => s?.show === "1").length;
   }, [shoots]);
 
-  const shotTwoDistance = useMemo(() => {
+  const twoShotTotal = useMemo(() => {
     return shoots.filter((s) => s?.show === "2").length;
   }, [shoots]);
 
   const [bulletOne, setBulletOne] = useState(0);
   const [bulletTwo, setBulletTwo] = useState(0);
   useEffect(() => {
-    if (shotOneDistance) {
-      setBulletOne(shotOneDistance);
+    if (oneShotTotal) {
+      setBulletOne(oneShotTotal);
     }
-  }, [shotOneDistance]);
+  }, [oneShotTotal]);
 
   useEffect(() => {
-    if (shotTwoDistance) {
-      setBulletTwo(shotTwoDistance);
+    if (twoShotTotal) {
+      setBulletTwo(twoShotTotal);
     }
-  }, [shotTwoDistance]);
+  }, [twoShotTotal]);
 
   function handleOneBullet(player: Player) {
     setBulletOne((state) => {
-      return definirTiros(state, players, player, handleSetPlayers);
+      return definirTiros(state, livePlayers, player, handleSetPlayers);
     });
   }
 
   function handleTwoBullet(player: Player) {
     setBulletTwo((state) => {
-      return definirTiros(state, players, player, handleSetPlayers);
+      return definirTiros(state, livePlayers, player, handleSetPlayers);
     });
   }
+  console.log(
+    livePlayers.map((p) => {
+      const data = {
+        user_id: p.user_id,
+        is_alive: p.is_alive,
+      };
+      return data;
+    })
+  );
   return (
     <View>
       <Modal animationType="slide" transparent visible={isVisible} focusable>
@@ -113,14 +126,16 @@ export default function Shoot({
           </View>
 
           <ListShoots
-            shotTwoDistance={shotOneDistance}
-            bulletTwo={bulletOne}
+            distance={1}
+            bullet={bulletOne}
+            bulletTotal={oneShotTotal}
             handleTwoBullet={handleOneBullet}
             playersTwoShot={playersOneShot}
           />
           <ListShoots
-            shotTwoDistance={shotTwoDistance}
-            bulletTwo={bulletTwo}
+            distance={2}
+            bullet={bulletTwo}
+            bulletTotal={twoShotTotal}
             handleTwoBullet={handleTwoBullet}
             playersTwoShot={playersTwoShot}
           />

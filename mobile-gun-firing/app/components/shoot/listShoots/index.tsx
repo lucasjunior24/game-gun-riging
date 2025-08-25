@@ -3,22 +3,26 @@ import CardShoot from "../../cardShoot";
 import { Player } from "@/app/consts/players";
 
 interface ListShootsProps {
-  shotTwoDistance: number;
+  distance: number;
+  bulletTotal: number;
   playersTwoShot: Player[];
-  bulletTwo: number;
+  bullet: number;
   handleTwoBullet: (player: Player) => void;
 }
 
 export default function ListShoots({
-  shotTwoDistance,
+  distance,
+  bulletTotal,
   playersTwoShot,
-  bulletTwo,
+  bullet,
   handleTwoBullet,
 }: ListShootsProps) {
   const VIEW = (
     <View>
       <View style={{ padding: 10 }}>
-        <Text style={styles.title}>2 Distancia / {shotTwoDistance} Tiros</Text>
+        <Text style={styles.title}>
+          {distance} Distancia / {bullet} Tiros
+        </Text>
       </View>
       <View>
         <FlatList
@@ -26,7 +30,7 @@ export default function ListShoots({
           renderItem={({ item }) => (
             <CardShoot
               player={item}
-              shoots={bulletTwo}
+              shoots={bullet}
               handleBullet={handleTwoBullet}
             />
           )}
@@ -35,7 +39,7 @@ export default function ListShoots({
       </View>
     </View>
   );
-  return shotTwoDistance ? VIEW : <></>;
+  return bulletTotal > 0 ? VIEW : <></>;
 }
 
 const styles = StyleSheet.create({

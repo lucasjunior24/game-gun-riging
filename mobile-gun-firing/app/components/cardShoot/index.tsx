@@ -49,7 +49,7 @@ export default function CardShoot({
             {player.user_name} - {player.identity}
           </Text>
           <Text style={styles.character}>
-            {player.character?.character} - {player.character?.bullet}
+            {player.character?.character} - {player.bullet}
           </Text>
         </View>
         <View style={{ width: 40 }}>

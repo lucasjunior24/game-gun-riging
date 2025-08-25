@@ -1,61 +1,60 @@
 import React, { useState } from "react";
 import { Player } from "@/app/consts/players";
-import { DiceCombinationUndefined, DiceOptions } from "@/app/consts/dice";
+import { DiceCombinationUndefined } from "@/app/consts/dice";
 import { pass_player } from "@/app/game/init_game";
 import { locked_dice, play_dice, sum_shoots } from "@/app/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Shoot from "../shoot";
+import DiceItem from "./diceItem";
 
-interface RicesProps {
+interface DicesProps {
   players: Player[];
   playerMoment: string;
   handleSetPlayers(players: Player[]): void;
   setPlayerMoment: (user_id: string) => void;
 }
 
-function getEmogiDice(dice: DiceOptions | undefined) {
-  switch (dice) {
-    case "Dinamite":
-      return "🧨";
-    case "Cerveja":
-      return "🍺";
-    case "Flexa":
-      return "🏹";
-    case "Metralhadora":
-      return "ᡕᠵ╤ᡁ᠊デ━";
-    default:
-      return dice;
-  }
-}
 const Dices = ({
   handleSetPlayers,
   players,
   playerMoment,
   setPlayerMoment,
-}: RicesProps) => {
+}: DicesProps) => {
   const [diceOne, setDiceOne] = useState<DiceCombinationUndefined>();
   const [diceTwo, setDiceTwo] = useState<DiceCombinationUndefined>();
-  const [diceTree, setDiceTree] = useState<DiceCombinationUndefined>();
+  const [diceThree, setDiceThree] = useState<DiceCombinationUndefined>();
+  const [diceFour, setDiceFour] = useState<DiceCombinationUndefined>();
+  const [diceFive, setDiceFive] = useState<DiceCombinationUndefined>();
+
   const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
+
   function passPlayer() {
     setPlayerMoment(pass_player(playerMoment));
     setDiceOne(undefined);
     setDiceTwo(undefined);
-    setDiceTree(undefined);
+    setDiceThree(undefined);
+    setDiceFour(undefined);
+    setDiceFive(undefined);
     setTotalDiceRolls(0);
   }
   console.log("playerMoment", playerMoment);
   console.log();
-  function playAllRice() {
+  function playAllDices() {
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
     }
     if (diceTwo?.locked !== true) {
       setDiceTwo(play_dice());
     }
-    if (diceTree?.locked !== true) {
-      setDiceTree(play_dice());
+    if (diceThree?.locked !== true) {
+      setDiceThree(play_dice());
+    }
+    if (diceFour?.locked !== true) {
+      setDiceFour(play_dice());
+    }
+    if (diceFive?.locked !== true) {
+      setDiceFive(play_dice());
     }
     setTotalDiceRolls((state) => {
       return (state += 1);
@@ -67,8 +66,8 @@ const Dices = ({
       if (p.user_id === Number(playerMoment)) {
         return p;
       }
-      if (p.character && p.character.bullet) {
-        p.character.bullet -= 1;
+      if (p.character && p.bullet) {
+        p.bullet -= 1;
       }
       return p;
     });
@@ -78,8 +77,14 @@ const Dices = ({
     // runMetralhadora();
     setOpenModal(true);
   }
-  const player = players.filter((p) => p.user_id === Number(playerMoment))[0];
-  const sumShoots = sum_shoots(diceOne, diceTwo, diceTree);
+
+  const player = players.find(
+    (p) => p.is_alive && p.user_id === Number(playerMoment)
+  );
+  if (player === undefined) {
+    return <Text>loading player...</Text>;
+  }
+  const sumShoots = sum_shoots(diceOne, diceTwo, diceThree, diceFour, diceFive);
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
@@ -93,14 +98,14 @@ const Dices = ({
           </View>
           <View style={styles.card}>
             <Pressable
-              onPress={playAllRice}
+              onPress={playAllDices}
               style={[
                 styles.button,
                 { backgroundColor: totalDiceRolls === 3 ? "red" : "blue" },
               ]}
               disabled={totalDiceRolls === 3}
             >
-              <Text style={styles.text}>Play All Rice</Text>
+              <Text style={styles.text}>Play All Dices</Text>
             </Pressable>
           </View>
           <Text style={styles.parentTitle}>
@@ -111,57 +116,32 @@ const Dices = ({
               onPress={exeDices}
               style={[styles.button, { backgroundColor: "green" }]}
             >
-              <Text style={styles.text}>Execute Rices</Text>
+              <Text style={styles.text}>Execute Dices</Text>
             </Pressable>
           </View>
         </View>
         <View style={styles.card}>
           <Text style={styles.parentTitle}>Dados travados</Text>
-
-          <View style={styles.dices}>
-            <Pressable
-              onPress={() => setDiceOne((state) => locked_dice(state))}
-              style={[
-                styles.buttonDice,
-                {
-                  backgroundColor: diceOne?.locked ? "red" : "blue",
-                },
-              ]}
-            >
-              <Text style={styles.text}> 🎲 </Text>
-            </Pressable>
-            <Text style={styles.icon}> {getEmogiDice(diceOne?.show)}</Text>
-          </View>
-
-          <View style={styles.dices}>
-            <Pressable
-              onPress={() => setDiceTwo((state) => locked_dice(state))}
-              style={[
-                styles.buttonDice,
-                {
-                  backgroundColor: diceTwo?.locked ? "red" : "blue",
-                },
-              ]}
-            >
-              <Text style={styles.text}> 🎲 </Text>
-            </Pressable>
-            <Text style={styles.icon}> {getEmogiDice(diceTwo?.show)}</Text>
-          </View>
-
-          <View style={styles.dices}>
-            <Pressable
-              onPress={() => setDiceTree((state) => locked_dice(state))}
-              style={[
-                styles.buttonDice,
-                {
-                  backgroundColor: diceTree?.locked ? "red" : "blue",
-                },
-              ]}
-            >
-              <Text style={styles.text}> 🎲 </Text>
-            </Pressable>
-            <Text style={styles.icon}> {getEmogiDice(diceTree?.show)}</Text>
-          </View>
+          <DiceItem
+            dice={diceOne}
+            handleDice={() => setDiceOne((state) => locked_dice(state))}
+          />
+          <DiceItem
+            dice={diceTwo}
+            handleDice={() => setDiceTwo((state) => locked_dice(state))}
+          />
+          <DiceItem
+            dice={diceThree}
+            handleDice={() => setDiceThree((state) => locked_dice(state))}
+          />
+          <DiceItem
+            dice={diceFour}
+            handleDice={() => setDiceFour((state) => locked_dice(state))}
+          />
+          <DiceItem
+            dice={diceFive}
+            handleDice={() => setDiceFive((state) => locked_dice(state))}
+          />
         </View>
       </View>
       <View>

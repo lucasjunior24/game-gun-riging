@@ -1,26 +1,49 @@
 import React, { useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 
-import { create_players, get_player_of_the_moment } from "./game/init_game";
+import {
+  create_players,
+  get_player_of_the_moment,
+  pass_player,
+} from "./game/init_game";
 import Dices from "./components/dices";
 import { Player } from "./consts/players";
 import CardPlayer from "./components/cardPlayer";
+import ChampionModal from "./components/alerts/champion";
 
 const Index = () => {
   const data = create_players();
 
-  const [players, setPlayers] = useState<Player[]>(data);
+  const [Players] = useState<Player[]>(data);
+  const [livePlayers, setLivePlayers] = useState<Player[]>(Players);
+
   function handleSetPlayers(players: Player[]) {
-    setPlayers(players);
+    setLivePlayers(players);
   }
+
   const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
   function handlePlayerMoment(user_id: string) {
-    setPlayerMoment(user_id);
+    let user = user_id;
+    let is_alive = false;
+
+    while (is_alive === false) {
+      console.log("new player moment: ", user);
+      const player = livePlayers.filter((p) => p.user_id === Number(user))[0];
+      if (player.is_alive) {
+        setPlayerMoment(user);
+        is_alive = true;
+      } else {
+        user = pass_player(user);
+      }
+    }
   }
+  console.log("Moment: ", playerMoment);
+  const [openModal, setOpenModal] = useState(false);
+
   return (
     <View style={styles.container}>
       <FlatList
-        data={players}
+        data={Players}
         renderItem={({ item }) => (
           <CardPlayer player={item} playerMoment={playerMoment} />
         )}
@@ -28,9 +51,16 @@ const Index = () => {
       />
       <Dices
         handleSetPlayers={handleSetPlayers}
-        players={players}
+        players={livePlayers}
         setPlayerMoment={handlePlayerMoment}
         playerMoment={playerMoment}
+      />
+
+      <ChampionModal
+        isVisible={openModal}
+        onClose={() => setOpenModal(!openModal)}
+        playerMoment={playerMoment}
+        players={livePlayers}
       />
     </View>
   );

@@ -10,14 +10,17 @@ const identitys_list: Identity[] = [
 ];
 
 export function create_players(): Player[] {
+  const users = ["Lucas", "Murilo", "Aragão", "Roberto"];
   const players = characters.map((c, i) => {
     const new_player: Player = {
       user_id: i + 1,
+      position: i + 1,
       is_alive: true,
       user_name: `User ${i + 1}`,
       character: c,
       identity: identitys_list[i],
       arrow: 0,
+      bullet: c.initial_bullet,
     };
     return new_player;
   });

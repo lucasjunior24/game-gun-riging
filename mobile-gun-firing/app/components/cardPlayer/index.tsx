@@ -9,7 +9,7 @@ type CardPlayerProps = {
 
 export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
   const image = useImage(player.character?.avatar as string, {
-    maxWidth: 800,
+    maxWidth: 400,
     onError(error) {
       console.error("Loading failed:", error.message);
     },
@@ -46,7 +46,7 @@ export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
             {player.user_name} - {player.identity}
           </Text>
           <Text style={styles.character}>
-            {player.character?.character} - {player.character?.bullet}
+            {player.character?.character} - {player.bullet}
           </Text>
         </View>
         {Number(playerMoment) === player.user_id && (

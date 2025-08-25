@@ -38,7 +38,9 @@ export function locked_dice(
 export function sum_shoots(
   diceOne: DiceCombinationUndefined,
   diceTwo: DiceCombinationUndefined,
-  diceTree: DiceCombinationUndefined
+  diceTree: DiceCombinationUndefined,
+  diceFour: DiceCombinationUndefined,
+  diceFive: DiceCombinationUndefined
 ): DiceCombinationUndefined[] {
   const dices: DiceCombinationUndefined[] = [];
   if (diceOne?.show === "1" || diceOne?.show === "2") {
@@ -49,6 +51,12 @@ export function sum_shoots(
   }
   if (diceTree?.show === "1" || diceTree?.show === "2") {
     dices.push(diceTree);
+  }
+  if (diceFour?.show === "1" || diceFour?.show === "2") {
+    dices.push(diceFour);
+  }
+  if (diceFive?.show === "1" || diceFive?.show === "2") {
+    dices.push(diceFive);
   }
   return dices;
 }

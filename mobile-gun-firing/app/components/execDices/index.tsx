@@ -39,8 +39,8 @@ const ShowDices = ({ handleSetPlayers, players }: DicesProps) => {
 
   function exeDices() {
     const players_now = players.map((p) => {
-      if (p.character && p.character.bullet) {
-        p.character.bullet -= 1;
+      if (p.character && p.bullet) {
+        p.bullet -= 1;
       }
       return p;
     });
