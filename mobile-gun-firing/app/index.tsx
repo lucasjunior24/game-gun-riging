@@ -1,11 +1,7 @@
 import React, { useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 
-import {
-  create_players,
-  get_player_of_the_moment,
-  pass_player,
-} from "./game/init_game";
+import { create_players } from "./game/init_game";
 import Dices from "./components/dices";
 import { Player } from "./consts/players";
 import CardPlayer from "./components/cardPlayer";
@@ -21,21 +17,11 @@ const Index = () => {
     setLivePlayers(players);
   }
 
-  const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
-  function handlePlayerMoment(user_id: string) {
-    let user = user_id;
-    let is_alive = false;
-
-    while (is_alive === false) {
-      console.log("new player moment: ", user);
-      const player = livePlayers.filter((p) => p.user_id === Number(user))[0];
-      if (player.is_alive) {
-        setPlayerMoment(user);
-        is_alive = true;
-      } else {
-        user = pass_player(user);
-      }
-    }
+  const [playerMoment, setPlayerMoment] = useState(3);
+  const [playerName, setPlayerName] = useState(Players[3].user_name);
+  function handlePlayerMoment(user_id: number, user_name: string) {
+    setPlayerMoment(user_id);
+    setPlayerName(user_name);
   }
   console.log("Moment: ", playerMoment);
   const [openModal, setOpenModal] = useState(false);
@@ -43,17 +29,18 @@ const Index = () => {
   return (
     <View style={styles.container}>
       <FlatList
-        data={Players}
-        renderItem={({ item }) => (
-          <CardPlayer player={item} playerMoment={playerMoment} />
+        data={livePlayers}
+        renderItem={({ index, item }) => (
+          <CardPlayer player={item} playerMoment={playerMoment} index={index} />
         )}
-        keyExtractor={(item) => String(item.user_id)}
+        keyExtractor={(item, index) => String(index)}
       />
       <Dices
         handleSetPlayers={handleSetPlayers}
         players={livePlayers}
         setPlayerMoment={handlePlayerMoment}
         playerMoment={playerMoment}
+        playerName={playerName}
       />
 
       <ChampionModal

@@ -1,5 +1,5 @@
 export function shoot_to_the_right(
-  player_moment: string,
+  player_moment: number,
   size: number,
   distance: number
 ): number {
@@ -14,14 +14,14 @@ export function shoot_to_the_right(
   return Number(player_moment) + distance;
 }
 export function shoot_to_the_left(
-  player_moment: string,
+  player_moment: number,
   size: number,
   distance: number
 ): number {
-  if (size === Number(player_moment)) {
+  if (size === player_moment) {
     return size - distance;
-  } else if (Number(player_moment) < size) {
-    const total = Number(player_moment) - distance;
+  } else if (player_moment < size) {
+    const total = player_moment - distance;
     if (total > 0) {
       return total;
     }
@@ -36,7 +36,7 @@ export function shoot_to_the_left(
 }
 
 export function players_to_shot(
-  current_player: string,
+  current_player: number,
   total_players: number,
   dice: 1 | 2
 ) {
@@ -46,7 +46,7 @@ export function players_to_shot(
     dice
   );
   const one_short_left = shoot_to_the_left(current_player, total_players, dice);
-  const players = new Set([one_short_left, one_short_right]);
+  const players = new Set([one_short_left - 1, one_short_right - 1]);
   const playersArray = Array.from(players);
   return playersArray;
 }

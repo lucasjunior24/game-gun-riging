@@ -4,10 +4,15 @@ import { Player } from "@/app/consts/players";
 import { Image, useImage } from "expo-image";
 type CardPlayerProps = {
   player: Player;
-  playerMoment: string;
+  playerMoment: number;
+  index: number;
 };
 
-export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
+export default function CardPlayer({
+  player,
+  playerMoment,
+  index,
+}: CardPlayerProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 400,
     onError(error) {
@@ -18,6 +23,7 @@ export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
   if (!image) {
     return <Text>Image is loading...</Text>;
   }
+  console.log(index);
   return (
     <View
       style={[
@@ -25,8 +31,7 @@ export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
         styles.borderedBox,
         {
           backgroundColor: player.identity === "Xerife" ? "#eecb02" : "white",
-          borderColor:
-            Number(playerMoment) === player.user_id ? "green" : "white",
+          borderColor: playerMoment === index ? "green" : "white",
         },
       ]}
     >
@@ -49,7 +54,7 @@ export default function CardPlayer({ player, playerMoment }: CardPlayerProps) {
             {player.character?.character} - {player.bullet}
           </Text>
         </View>
-        {Number(playerMoment) === player.user_id && (
+        {playerMoment === index && (
           <View style={[styles.borderedBox, styles.box]}>
             <Text style={styles.boxIcon}>🎮</Text>
           </View>

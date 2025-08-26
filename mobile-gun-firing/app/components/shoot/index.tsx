@@ -13,31 +13,40 @@ import ListShoots from "./listShoots";
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
-  playerMoment: string;
+  playerMoment: number;
+  playerName: string;
   players: Player[];
   shoots: DiceCombinationUndefined[];
   handleSetPlayers(players: Player[]): void;
-  passPlayer(): void;
+  handleSetPlayer(playerMoment: number): void;
 }>;
 
 function definirTiros(
   state: number,
+  playerName: string,
   players: Player[],
   player: Player,
-  handleSetPlayers: (players: Player[]) => void
+  handleSetPlayers: (players: Player[]) => void,
+  handleSetPlayer: (playerMoment: number) => void
 ): number {
   if (state > 0) {
-    const new_players = players.map((p) => {
-      if (p.user_id === player.user_id && p.bullet) {
-        p.bullet -= 1;
-        if (p.bullet === 0) {
-          p.is_alive = false;
+    const new_players = players
+      .map((p) => {
+        if (p.user_id === player.user_id && p.bullet) {
+          p.bullet -= 1;
+          if (p.bullet === 0) {
+            return;
+          }
+          return p;
         }
         return p;
-      }
-      return p;
-    });
+      })
+      .filter((p) => p !== undefined);
+    const index = new_players.findIndex((p) => p.user_name === playerName);
+
+    console.log("new index: ", index);
     handleSetPlayers(new_players);
+    handleSetPlayer(index);
     return state - 1;
   }
   return state;
@@ -49,70 +58,87 @@ export default function Shoot({
   playerMoment,
   players,
   shoots,
+  playerName,
   handleSetPlayers,
+  handleSetPlayer,
 }: ShootProps) {
-  const livePlayers = players.filter((p) => p.is_alive);
+  const livePlayers = players;
 
-  const optionsOneShoot = players_to_shot(playerMoment, livePlayers.length, 1);
-  const optionsTwoShoot = players_to_shot(playerMoment, livePlayers.length, 2);
+  const optionsOneShoot = players_to_shot(
+    playerMoment + 1,
+    livePlayers.length,
+    1
+  );
+
+  console.log("playerMoment ", playerMoment);
+  console.log("livePlayers ", livePlayers.length);
+  console.log(optionsOneShoot);
+  // console.log(optionsOneShoot);
+  // const optionsTwoShoot = players_to_shot(playerMoment, livePlayers.length, 2);
+
   const playersOneShot = useMemo(() => {
-    return livePlayers.filter((p) => {
-      if (optionsOneShoot.find((user) => user === p.user_id)) {
-        return p;
-      }
-    });
-  }, [optionsOneShoot, livePlayers]);
+    return optionsOneShoot
+      .map((index) => livePlayers.find((user, i) => i === index))
+      .filter((p) => p !== undefined)
+      .filter((p) => p.user_name !== playerName);
+  }, [livePlayers, optionsOneShoot, playerName]);
 
-  const playersTwoShot = useMemo(() => {
-    return livePlayers.filter((p) => {
-      if (optionsTwoShoot.find((user) => user === p.user_id)) {
-        return p;
-      }
-    });
-  }, [optionsTwoShoot, livePlayers]);
+  console.log(
+    playersOneShot.map((p) => {
+      return p.user_name;
+    })
+  );
+
+  // console.log("playersOneShot, ", playersOneShot);
+  // const playersTwoShot = useMemo(() => {
+  //   return livePlayers.filter((p) => {
+  //     if (optionsTwoShoot.find((user) => user === p.user_id)) {
+  //       return p;
+  //     }
+  //   });
+  // }, [optionsTwoShoot, livePlayers]);
 
   const oneShotTotal = useMemo(() => {
     return shoots.filter((s) => s?.show === "1").length;
   }, [shoots]);
 
-  const twoShotTotal = useMemo(() => {
-    return shoots.filter((s) => s?.show === "2").length;
-  }, [shoots]);
+  // const twoShotTotal = useMemo(() => {
+  //   return shoots.filter((s) => s?.show === "2").length;
+  // }, [shoots]);
 
   const [bulletOne, setBulletOne] = useState(0);
-  const [bulletTwo, setBulletTwo] = useState(0);
+  // const [bulletTwo, setBulletTwo] = useState(0);
   useEffect(() => {
     if (oneShotTotal) {
       setBulletOne(oneShotTotal);
     }
   }, [oneShotTotal]);
 
-  useEffect(() => {
-    if (twoShotTotal) {
-      setBulletTwo(twoShotTotal);
-    }
-  }, [twoShotTotal]);
+  // useEffect(() => {
+  //   if (twoShotTotal) {
+  //     setBulletTwo(twoShotTotal);
+  //   }
+  // }, [twoShotTotal]);
 
   function handleOneBullet(player: Player) {
     setBulletOne((state) => {
-      return definirTiros(state, livePlayers, player, handleSetPlayers);
+      return definirTiros(
+        state,
+        playerName,
+        livePlayers,
+        player,
+        handleSetPlayers,
+        handleSetPlayer
+      );
     });
   }
 
-  function handleTwoBullet(player: Player) {
-    setBulletTwo((state) => {
-      return definirTiros(state, livePlayers, player, handleSetPlayers);
-    });
-  }
-  console.log(
-    livePlayers.map((p) => {
-      const data = {
-        user_id: p.user_id,
-        is_alive: p.is_alive,
-      };
-      return data;
-    })
-  );
+  // function handleTwoBullet(player: Player) {
+  //   setBulletTwo((state) => {
+  //     return definirTiros(state, livePlayers, player, handleSetPlayers);
+  //   });
+  // }
+
   return (
     <View>
       <Modal animationType="slide" transparent visible={isVisible} focusable>
@@ -132,13 +158,13 @@ export default function Shoot({
             handleTwoBullet={handleOneBullet}
             playersTwoShot={playersOneShot}
           />
-          <ListShoots
+          {/* <ListShoots
             distance={2}
             bullet={bulletTwo}
             bulletTotal={twoShotTotal}
             handleTwoBullet={handleTwoBullet}
             playersTwoShot={playersTwoShot}
-          />
+          /> */}
 
           <View style={{ padding: 10, paddingTop: 20 }}>
             <ButtonBase onPress={onClose} text="Executar" />

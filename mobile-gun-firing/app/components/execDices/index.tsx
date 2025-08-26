@@ -1,6 +1,6 @@
 import { Player } from "@/app/consts/players";
 import { DiceCombination } from "@/app/consts/dice";
-import { get_player_of_the_moment, pass_player } from "@/app/game/init_game";
+
 import { play_dice } from "@/app/game/play_dice";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
@@ -9,14 +9,12 @@ interface DicesProps {
   handleSetPlayers(players: Player[]): void;
   players: Player[];
 }
-const ShowDices = ({ handleSetPlayers, players }: DicesProps) => {
-  const [playerMoment, setPlayerMoment] = useState(get_player_of_the_moment());
+const ExecuteDices = ({ handleSetPlayers, players }: DicesProps) => {
   const [diceOne, setDiceOne] = useState<DiceCombination | undefined>();
   const [diceTwo, setDiceTwo] = useState<DiceCombination | undefined>();
   const [diceTree, setDiceTree] = useState<DiceCombination | undefined>();
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
   function passPlayer() {
-    setPlayerMoment(pass_player(playerMoment));
     setDiceOne(undefined);
     setDiceTwo(undefined);
     setDiceTree(undefined);
@@ -50,7 +48,7 @@ const ShowDices = ({ handleSetPlayers, players }: DicesProps) => {
     <View style={styles.container}>
       <View style={styles.footer}>
         <View style={styles.card}>
-          <Text style={styles.parentTitle}>Jogador atual: {playerMoment}</Text>
+          <Text style={styles.parentTitle}>Jogador atual: {1}</Text>
           <View style={styles.card}>
             <Pressable onPress={passPlayer} style={styles.button}>
               <Text style={styles.text}>Pass Player</Text>
@@ -147,7 +145,7 @@ const ShowDices = ({ handleSetPlayers, players }: DicesProps) => {
     </View>
   );
 };
-export default ShowDices;
+export default ExecuteDices;
 
 const styles = StyleSheet.create({
   container: {

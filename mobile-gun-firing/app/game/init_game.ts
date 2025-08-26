@@ -1,5 +1,5 @@
 import { characters, Identity } from "../consts/characters";
-import { BangDeparture } from "../consts/game_match";
+
 import { Player } from "../consts/players";
 
 const identitys_list: Identity[] = [
@@ -16,7 +16,7 @@ export function create_players(): Player[] {
       user_id: i + 1,
       position: i + 1,
       is_alive: true,
-      user_name: `User ${i + 1}`,
+      user_name: users[i],
       character: c,
       identity: identitys_list[i],
       arrow: 0,
@@ -38,24 +38,27 @@ export function get_xerife(): Player {
 }
 export function get_users_ids(): number[] {
   const players = create_players();
-  const user_ids = players.map((p) => p.user_id);
+  const user_ids = players.map((p, index) => index);
   return user_ids;
 }
 
 export function get_player_of_the_moment(): string {
-  const game = BangDeparture.getInstance();
-  return game.get_player_of_the_moment();
+  const xerife = get_xerife();
+  return String(xerife.user_id);
 }
-export function pass_player(player_moment: string): string {
-  const all_players = get_users_ids();
-  if (all_players.length === Number(player_moment)) {
-    return "1";
+export function pass_player(
+  player_moment: number,
+  players_size: number
+): number {
+  let result = 0;
+  if (players_size - 1 === player_moment) {
+    result = 0;
+
+    return result;
   }
-  return `${Number(player_moment) + 1}`;
-}
-export function create_game(): BangDeparture {
-  const game = BangDeparture.getInstance();
-  return game;
+  result = player_moment + 1;
+
+  return result;
 }
 
 export function get_player_by_user(user: number[], players: Player[]) {

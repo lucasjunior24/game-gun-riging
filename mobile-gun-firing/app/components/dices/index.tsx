@@ -9,15 +9,17 @@ import DiceItem from "./diceItem";
 
 interface DicesProps {
   players: Player[];
-  playerMoment: string;
+  playerMoment: number;
+  playerName: string;
   handleSetPlayers(players: Player[]): void;
-  setPlayerMoment: (user_id: string) => void;
+  setPlayerMoment: (user_id: number, user_name: string) => void;
 }
 
 const Dices = ({
-  handleSetPlayers,
   players,
   playerMoment,
+  playerName,
+  handleSetPlayers,
   setPlayerMoment,
 }: DicesProps) => {
   const [diceOne, setDiceOne] = useState<DiceCombinationUndefined>();
@@ -29,8 +31,13 @@ const Dices = ({
   const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
 
+  // const pl = players.indexOf(, playerMoment);
+  // console.log("pl: ", pl);
   function passPlayer() {
-    setPlayerMoment(pass_player(playerMoment));
+    const new_pl = pass_player(playerMoment, players.length);
+    const player = players[new_pl];
+
+    setPlayerMoment(new_pl, player.user_name);
     setDiceOne(undefined);
     setDiceTwo(undefined);
     setDiceThree(undefined);
@@ -38,8 +45,12 @@ const Dices = ({
     setDiceFive(undefined);
     setTotalDiceRolls(0);
   }
-  console.log("playerMoment", playerMoment);
-  console.log();
+  function handleSetPlayer(playerMoment: number) {
+    setPlayerMoment(playerMoment, playerName);
+  }
+  const player = players.filter((p) => p.user_name === playerName)[0];
+  console.log("playerMoment: ", playerMoment);
+  console.log(playerName);
   function playAllDices() {
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
@@ -61,26 +72,23 @@ const Dices = ({
     });
   }
 
-  function runMetralhadora() {
-    const players_now = players.map((p) => {
-      if (p.user_id === Number(playerMoment)) {
-        return p;
-      }
-      if (p.character && p.bullet) {
-        p.bullet -= 1;
-      }
-      return p;
-    });
-    handleSetPlayers(players_now);
-  }
+  // function runMetralhadora() {
+  //   const players_now = players.map((p) => {
+  //     if (p.user_id === Number(playerMoment)) {
+  //       return p;
+  //     }
+  //     if (p.character && p.bullet) {
+  //       p.bullet -= 1;
+  //     }
+  //     return p;
+  //   });
+  //   handleSetPlayers(players_now);
+  // }
   function exeDices() {
     // runMetralhadora();
     setOpenModal(true);
   }
 
-  const player = players.find(
-    (p) => p.is_alive && p.user_id === Number(playerMoment)
-  );
   if (player === undefined) {
     return <Text>loading player...</Text>;
   }
@@ -152,7 +160,8 @@ const Dices = ({
           players={players}
           shoots={sumShoots}
           handleSetPlayers={handleSetPlayers}
-          passPlayer={passPlayer}
+          playerName={playerName}
+          handleSetPlayer={handleSetPlayer}
         />
       </View>
     </View>

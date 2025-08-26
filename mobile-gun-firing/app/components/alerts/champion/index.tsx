@@ -8,7 +8,7 @@ import { ButtonBase } from "../../buttonBase";
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
-  playerMoment: string;
+  playerMoment: number;
   players: Player[];
 }>;
 
