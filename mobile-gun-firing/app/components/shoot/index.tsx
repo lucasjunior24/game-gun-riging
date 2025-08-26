@@ -73,8 +73,12 @@ export default function Shoot({
   console.log("playerMoment ", playerMoment);
   console.log("livePlayers ", livePlayers.length);
   console.log(optionsOneShoot);
-  // console.log(optionsOneShoot);
-  // const optionsTwoShoot = players_to_shot(playerMoment, livePlayers.length, 2);
+  console.log(optionsOneShoot);
+  const optionsTwoShoot = players_to_shot(
+    playerMoment + 1,
+    livePlayers.length,
+    livePlayers.length === 2 ? 1 : 2
+  );
 
   const playersOneShot = useMemo(() => {
     return optionsOneShoot
@@ -90,35 +94,36 @@ export default function Shoot({
   );
 
   // console.log("playersOneShot, ", playersOneShot);
-  // const playersTwoShot = useMemo(() => {
-  //   return livePlayers.filter((p) => {
-  //     if (optionsTwoShoot.find((user) => user === p.user_id)) {
-  //       return p;
-  //     }
-  //   });
-  // }, [optionsTwoShoot, livePlayers]);
+
+  const playersTwoShot = useMemo(() => {
+    return optionsTwoShoot
+      .map((index) => livePlayers.find((user, i) => i === index))
+      .filter((p) => p !== undefined)
+      .filter((p) => p.user_name !== playerName);
+  }, [livePlayers, optionsTwoShoot, playerName]);
 
   const oneShotTotal = useMemo(() => {
     return shoots.filter((s) => s?.show === "1").length;
   }, [shoots]);
 
-  // const twoShotTotal = useMemo(() => {
-  //   return shoots.filter((s) => s?.show === "2").length;
-  // }, [shoots]);
+  const twoShotTotal = useMemo(() => {
+    return shoots.filter((s) => s?.show === "2").length;
+  }, [shoots]);
 
   const [bulletOne, setBulletOne] = useState(0);
-  // const [bulletTwo, setBulletTwo] = useState(0);
+  const [bulletTwo, setBulletTwo] = useState(0);
+
   useEffect(() => {
     if (oneShotTotal) {
       setBulletOne(oneShotTotal);
     }
   }, [oneShotTotal]);
 
-  // useEffect(() => {
-  //   if (twoShotTotal) {
-  //     setBulletTwo(twoShotTotal);
-  //   }
-  // }, [twoShotTotal]);
+  useEffect(() => {
+    if (twoShotTotal) {
+      setBulletTwo(twoShotTotal);
+    }
+  }, [twoShotTotal]);
 
   function handleOneBullet(player: Player) {
     setBulletOne((state) => {
@@ -133,11 +138,18 @@ export default function Shoot({
     });
   }
 
-  // function handleTwoBullet(player: Player) {
-  //   setBulletTwo((state) => {
-  //     return definirTiros(state, livePlayers, player, handleSetPlayers);
-  //   });
-  // }
+  function handleTwoBullet(player: Player) {
+    setBulletTwo((state) => {
+      return definirTiros(
+        state,
+        playerName,
+        livePlayers,
+        player,
+        handleSetPlayers,
+        handleSetPlayer
+      );
+    });
+  }
 
   return (
     <View>
@@ -158,13 +170,13 @@ export default function Shoot({
             handleTwoBullet={handleOneBullet}
             playersTwoShot={playersOneShot}
           />
-          {/* <ListShoots
+          <ListShoots
             distance={2}
             bullet={bulletTwo}
             bulletTotal={twoShotTotal}
             handleTwoBullet={handleTwoBullet}
             playersTwoShot={playersTwoShot}
-          /> */}
+          />
 
           <View style={{ padding: 10, paddingTop: 20 }}>
             <ButtonBase onPress={onClose} text="Executar" />
