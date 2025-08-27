@@ -67,7 +67,7 @@ export default function CardShoot({
         <View
           style={{
             flexDirection: "row",
-            width: 70,
+            width: 90,
             justifyContent: "space-between",
             alignItems: "center",
           }}
@@ -96,10 +96,30 @@ export default function CardShoot({
                   ];
                 });
               }}
-              text={` + ${shoots} `}
+              text={`${shoots - sumTotalShot} `}
             />
           </View>
-          {user && <Text style={styles.character}>- {user.shoots}</Text>}
+          <View style={{ width: 40 }}>
+            {user && (
+              <ButtonIcon
+                disabled={user.shoots === 0}
+                onPress={() => {
+                  setUser((state) => {
+                    const users = state.map((u) => {
+                      if (u.index === player.user_name) {
+                        u.shoots -= 1;
+                        return u;
+                      }
+                      return u;
+                    });
+                    return users;
+                  });
+                }}
+                text={`- ${user.shoots}`}
+                color="red"
+              />
+            )}
+          </View>
         </View>
       </View>
     </View>
