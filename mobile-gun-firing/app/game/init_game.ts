@@ -5,12 +5,13 @@ import { Player } from "../consts/players";
 const identitys_list: Identity[] = [
   "Assistente",
   "Fora da lei",
+  "Fora da lei",
   "Renegado",
   "Xerife",
 ];
 
 export function create_players(): Player[] {
-  const users = ["Lucas", "Murilo", "Aragão", "Roberto"];
+  const users = ["Lucas", "Murilo", "Aragão", "Roberto", "Bot"];
   const players = characters.map((c, i) => {
     const new_player: Player = {
       user_id: i + 1,

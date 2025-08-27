@@ -31,8 +31,6 @@ const Dices = ({
   const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
 
-  // const pl = players.indexOf(, playerMoment);
-  // console.log("pl: ", pl);
   function passPlayer() {
     const new_pl = pass_player(playerMoment, players.length);
     const player = players[new_pl];
@@ -50,7 +48,7 @@ const Dices = ({
   }
   const player = players.filter((p) => p.user_name === playerName)[0];
   console.log("playerMoment: ", playerMoment);
-  console.log(playerName);
+
   function playAllDices() {
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());

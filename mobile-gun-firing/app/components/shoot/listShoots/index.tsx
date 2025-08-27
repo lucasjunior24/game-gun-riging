@@ -1,21 +1,25 @@
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import CardShoot from "../../cardShoot";
 import { Player } from "@/app/consts/players";
+import { userBullets } from "..";
+import { Dispatch } from "react";
 
 interface ListShootsProps {
   distance: number;
   bulletTotal: number;
-  playersTwoShot: Player[];
+  playersOptions: Player[];
   bullet: number;
-  handleTwoBullet: (player: Player) => void;
+  userBullets: userBullets[];
+  setUser: Dispatch<React.SetStateAction<userBullets[]>>;
 }
 
 export default function ListShoots({
   distance,
   bulletTotal,
-  playersTwoShot,
+  playersOptions,
   bullet,
-  handleTwoBullet,
+  userBullets,
+  setUser,
 }: ListShootsProps) {
   const VIEW = (
     <View>
@@ -26,12 +30,13 @@ export default function ListShoots({
       </View>
       <View>
         <FlatList
-          data={playersTwoShot}
+          data={playersOptions}
           renderItem={({ item }) => (
             <CardShoot
               player={item}
               shoots={bullet}
-              handleBullet={handleTwoBullet}
+              setUser={setUser}
+              userBullets={userBullets}
             />
           )}
           keyExtractor={(item) => String(item.user_id)}

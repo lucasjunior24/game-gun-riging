@@ -23,7 +23,7 @@ export default function CardPlayer({
   if (!image) {
     return <Text>Image is loading...</Text>;
   }
-  console.log(index);
+
   return (
     <View
       style={[

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 
 import { create_players } from "./game/init_game";
@@ -6,6 +6,7 @@ import Dices from "./components/dices";
 import { Player } from "./consts/players";
 import CardPlayer from "./components/cardPlayer";
 import ChampionModal from "./components/alerts/champion";
+// import CircularList from "./components/circularList";
 
 const Index = () => {
   const data = create_players();
@@ -23,9 +24,14 @@ const Index = () => {
     setPlayerMoment(user_id);
     setPlayerName(user_name);
   }
-  console.log("Moment: ", playerMoment);
+
   const [openModal, setOpenModal] = useState(false);
 
+  useEffect(() => {
+    if (livePlayers.length === 1) {
+      setOpenModal(true);
+    }
+  }, [livePlayers.length]);
   return (
     <View style={styles.container}>
       <FlatList
@@ -35,6 +41,7 @@ const Index = () => {
         )}
         keyExtractor={(item, index) => String(index)}
       />
+      {/* <CircularList /> */}
       <Dices
         handleSetPlayers={handleSetPlayers}
         players={livePlayers}

@@ -3,17 +3,22 @@ import { Image, useImage } from "expo-image";
 
 import { Player } from "@/app/consts/players";
 import { ButtonIcon } from "../buttonIcon";
+import { userBullets } from "../shoot";
+import { Dispatch } from "react";
 
 type ShootProps = {
   player: Player;
   shoots: number;
-  handleBullet: (player: Player) => void;
+  userBullets: userBullets[];
+  setUser: Dispatch<React.SetStateAction<userBullets[]>>;
 };
 
 export default function CardShoot({
   player,
   shoots,
-  handleBullet,
+  userBullets,
+
+  setUser,
 }: ShootProps) {
   const image = useImage(player.character?.avatar as string, {
     maxWidth: 800,
@@ -25,6 +30,13 @@ export default function CardShoot({
   if (!image) {
     return <Text>Image is loading...</Text>;
   }
+
+  const user = userBullets.find((u) => u.index === player.user_name);
+  const totalShot = userBullets.map((u) => u.shoots);
+  const sumTotalShot = totalShot.reduce(
+    (accumulator, currentValue) => accumulator + currentValue,
+    0
+  );
 
   return (
     <View
@@ -52,11 +64,42 @@ export default function CardShoot({
             {player.character?.character} - {player.bullet}
           </Text>
         </View>
-        <View style={{ width: 40 }}>
-          <ButtonIcon
-            onPress={() => handleBullet(player)}
-            text={` + ${shoots} `}
-          />
+        <View
+          style={{
+            flexDirection: "row",
+            width: 70,
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <View style={{ width: 40 }}>
+            <ButtonIcon
+              disabled={shoots === sumTotalShot}
+              onPress={() => {
+                setUser((state) => {
+                  const users = state.map((u) => {
+                    if (u.index === player.user_name) {
+                      u.shoots += 1;
+                      return u;
+                    }
+                    return u;
+                  });
+                  if (users.length && user) {
+                    return users;
+                  }
+                  return [
+                    ...state,
+                    {
+                      index: player.user_name,
+                      shoots: 1,
+                    },
+                  ];
+                });
+              }}
+              text={` + ${shoots} `}
+            />
+          </View>
+          {user && <Text style={styles.character}>- {user.shoots}</Text>}
         </View>
       </View>
     </View>

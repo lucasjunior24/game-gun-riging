@@ -9,7 +9,21 @@ import { ButtonBase } from "../buttonBase";
 import { DiceCombinationUndefined } from "@/app/consts/dice";
 
 import ListShoots from "./listShoots";
-
+function parsePlayers(new_players: Player[], user: userBullets) {
+  new_players = new_players
+    .map((p) => {
+      if (p.user_name === user.index && p.bullet) {
+        p.bullet -= user.shoots;
+        if (p.bullet < 1) {
+          return;
+        }
+        return p;
+      }
+      return p;
+    })
+    .filter((p) => p !== undefined);
+  return new_players;
+}
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
@@ -21,35 +35,9 @@ type ShootProps = PropsWithChildren<{
   handleSetPlayer(playerMoment: number): void;
 }>;
 
-function definirTiros(
-  state: number,
-  playerName: string,
-  players: Player[],
-  player: Player,
-  handleSetPlayers: (players: Player[]) => void,
-  handleSetPlayer: (playerMoment: number) => void
-): number {
-  if (state > 0) {
-    const new_players = players
-      .map((p) => {
-        if (p.user_id === player.user_id && p.bullet) {
-          p.bullet -= 1;
-          if (p.bullet === 0) {
-            return;
-          }
-          return p;
-        }
-        return p;
-      })
-      .filter((p) => p !== undefined);
-    const index = new_players.findIndex((p) => p.user_name === playerName);
-
-    console.log("new index: ", index);
-    handleSetPlayers(new_players);
-    handleSetPlayer(index);
-    return state - 1;
-  }
-  return state;
+export interface userBullets {
+  index: string;
+  shoots: number;
 }
 
 export default function Shoot({
@@ -70,10 +58,6 @@ export default function Shoot({
     1
   );
 
-  console.log("playerMoment ", playerMoment);
-  console.log("livePlayers ", livePlayers.length);
-  console.log(optionsOneShoot);
-  console.log(optionsOneShoot);
   const optionsTwoShoot = players_to_shot(
     playerMoment + 1,
     livePlayers.length,
@@ -92,8 +76,6 @@ export default function Shoot({
       return p.user_name;
     })
   );
-
-  // console.log("playersOneShot, ", playersOneShot);
 
   const playersTwoShot = useMemo(() => {
     return optionsTwoShoot
@@ -125,30 +107,24 @@ export default function Shoot({
     }
   }, [twoShotTotal]);
 
-  function handleOneBullet(player: Player) {
-    setBulletOne((state) => {
-      return definirTiros(
-        state,
-        playerName,
-        livePlayers,
-        player,
-        handleSetPlayers,
-        handleSetPlayer
-      );
-    });
-  }
+  const [userOneBullets, setUserOneBullets] = useState<userBullets[]>([]);
+  const [userTwoBullets, setUserTwoBullets] = useState<userBullets[]>([]);
 
-  function handleTwoBullet(player: Player) {
-    setBulletTwo((state) => {
-      return definirTiros(
-        state,
-        playerName,
-        livePlayers,
-        player,
-        handleSetPlayers,
-        handleSetPlayer
-      );
+  console.log(userOneBullets);
+  function execution() {
+    let players_updated: Player[] = players;
+    userOneBullets.forEach((user) => {
+      players_updated = parsePlayers(players_updated, user);
     });
+
+    userTwoBullets.forEach((user) => {
+      players_updated = parsePlayers(players_updated, user);
+    });
+
+    handleSetPlayers(players_updated);
+    const index = players_updated.findIndex((p) => p.user_name === playerName);
+    handleSetPlayer(index);
+    onClose();
   }
 
   return (
@@ -167,19 +143,23 @@ export default function Shoot({
             distance={1}
             bullet={bulletOne}
             bulletTotal={oneShotTotal}
-            handleTwoBullet={handleOneBullet}
-            playersTwoShot={playersOneShot}
+            playersOptions={playersOneShot}
+            setUser={setUserOneBullets}
+            userBullets={userOneBullets}
           />
-          <ListShoots
-            distance={2}
-            bullet={bulletTwo}
-            bulletTotal={twoShotTotal}
-            handleTwoBullet={handleTwoBullet}
-            playersTwoShot={playersTwoShot}
-          />
+          {twoShotTotal !== 0 && (
+            <ListShoots
+              distance={livePlayers.length > 3 ? 2 : 1}
+              bullet={bulletTwo}
+              bulletTotal={twoShotTotal}
+              playersOptions={playersTwoShot}
+              setUser={setUserTwoBullets}
+              userBullets={userTwoBullets}
+            />
+          )}
 
           <View style={{ padding: 10, paddingTop: 20 }}>
-            <ButtonBase onPress={onClose} text="Executar" />
+            <ButtonBase onPress={execution} text="Executar" />
           </View>
         </View>
       </Modal>
