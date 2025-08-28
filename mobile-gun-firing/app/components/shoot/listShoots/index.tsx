@@ -8,7 +8,6 @@ interface ListShootsProps {
   distance: number;
   bulletTotal: number;
   playersOptions: Player[];
-  bullet: number;
   userBullets: userBullets[];
   setUser: Dispatch<React.SetStateAction<userBullets[]>>;
 }
@@ -17,7 +16,6 @@ export default function ListShoots({
   distance,
   bulletTotal,
   playersOptions,
-  bullet,
   userBullets,
   setUser,
 }: ListShootsProps) {
@@ -25,7 +23,7 @@ export default function ListShoots({
     <View>
       <View style={{ padding: 10 }}>
         <Text style={styles.title}>
-          {distance} Distancia / {bullet} Tiros
+          {distance} Distancia / {bulletTotal} Tiros
         </Text>
       </View>
       <View>
@@ -34,7 +32,6 @@ export default function ListShoots({
           renderItem={({ item }) => (
             <CardShoot
               player={item}
-              shoots={bullet}
               bulletTotal={bulletTotal}
               setUser={setUser}
               userBullets={userBullets}

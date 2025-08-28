@@ -8,7 +8,6 @@ import { Dispatch } from "react";
 
 type ShootProps = {
   player: Player;
-  shoots: number;
   bulletTotal: number;
   userBullets: userBullets[];
   setUser: Dispatch<React.SetStateAction<userBullets[]>>;
@@ -16,7 +15,6 @@ type ShootProps = {
 
 export default function CardShoot({
   player,
-  shoots,
   userBullets,
   bulletTotal,
   setUser,

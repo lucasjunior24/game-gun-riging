@@ -43,11 +43,6 @@ const Index = () => {
     }
   }, [teamChampion]);
 
-  console.log(
-    "team: ",
-    players.map((p) => p.team),
-    teamChampion
-  );
   return (
     <View style={styles.container}>
       <FlatList

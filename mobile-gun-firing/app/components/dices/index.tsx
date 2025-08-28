@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Player } from "@/app/consts/players";
 import { DiceCombinationUndefined } from "@/app/consts/dice";
 import { pass_player } from "@/app/game/init_game";
@@ -6,6 +6,7 @@ import { locked_dice, play_dice, sum_shoots } from "@/app/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Shoot from "../shoot";
 import DiceItem from "./diceItem";
+import { sleep } from "@/app/utils/sleep";
 
 interface DicesProps {
   players: Player[];
@@ -56,7 +57,7 @@ const Dices = ({
   const player = players.filter((p) => p.user_name === playerName)[0];
   console.log("playerMoment: ", playerMoment);
 
-  function playAllDices() {
+  const playAllDices = useCallback(() => {
     if (diceOne?.locked !== true) {
       setDiceOne(play_dice());
     }
@@ -75,7 +76,13 @@ const Dices = ({
     setTotalDiceRolls((state) => {
       return (state += 1);
     });
-  }
+  }, [
+    diceFive?.locked,
+    diceFour?.locked,
+    diceOne?.locked,
+    diceThree?.locked,
+    diceTwo?.locked,
+  ]);
 
   // function runMetralhadora() {
   //   const players_now = players.map((p) => {
@@ -103,10 +110,33 @@ const Dices = ({
     setOpenModal(false);
     clearDices();
   }
+
+  const sumShoots = sum_shoots(diceOne, diceTwo, diceThree, diceFour, diceFive);
+  // async function botRun() {
+  //   await sleep(2);
+  //   if (player.is_bot) {
+  //     console.log("playAllDices");
+  //     playAllDices();
+  //   }
+  // }
+  const botExecuteDices = useCallback(async () => {
+    await sleep(3);
+    if (player.is_bot && totalDiceRolls < 3) {
+      console.log("play All Dices: ", totalDiceRolls);
+      playAllDices();
+    }
+    if (totalDiceRolls === 2) {
+      await sleep(3);
+      passPlayer();
+    }
+  }, [passPlayer, playAllDices, player.is_bot, totalDiceRolls]);
+  useEffect(() => {
+    botExecuteDices();
+  }, [botExecuteDices]);
+  console.log("shots:  ", sumShoots);
   if (player === undefined) {
     return <Text>loading player...</Text>;
   }
-  const sumShoots = sum_shoots(diceOne, diceTwo, diceThree, diceFour, diceFive);
   return (
     <View style={styles.container}>
       <View style={styles.footer}>
@@ -123,9 +153,9 @@ const Dices = ({
               onPress={playAllDices}
               style={[
                 styles.button,
-                { backgroundColor: totalDiceRolls === 3 ? "red" : "blue" },
+                { backgroundColor: totalDiceRolls > 2 ? "red" : "blue" },
               ]}
-              disabled={totalDiceRolls === 3}
+              disabled={totalDiceRolls > 2}
             >
               <Text style={styles.text}>Play All Dices</Text>
             </Pressable>

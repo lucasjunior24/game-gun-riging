@@ -73,11 +73,11 @@ export default function Shoot({
       .filter((p) => p.user_name !== playerName);
   }, [livePlayers, optionsOneShoot, playerName]);
 
-  console.log(
-    playersOneShot.map((p) => {
-      return p.user_name;
-    })
-  );
+  // console.log(
+  //   playersOneShot.map((p) => {
+  //     return p.user_name;
+  //   })
+  // );
 
   const playersTwoShot = useMemo(() => {
     return optionsTwoShoot
@@ -94,25 +94,9 @@ export default function Shoot({
     return shoots.filter((s) => s?.show === "2").length;
   }, [shoots]);
 
-  const [bulletOne, setBulletOne] = useState(0);
-  const [bulletTwo, setBulletTwo] = useState(0);
-
-  useEffect(() => {
-    if (oneShotTotal) {
-      setBulletOne(oneShotTotal);
-    }
-  }, [oneShotTotal]);
-
-  useEffect(() => {
-    if (twoShotTotal) {
-      setBulletTwo(twoShotTotal);
-    }
-  }, [twoShotTotal]);
-
   const [userOneBullets, setUserOneBullets] = useState<userBullets[]>([]);
   const [userTwoBullets, setUserTwoBullets] = useState<userBullets[]>([]);
 
-  console.log(userOneBullets);
   function execution() {
     let players_updated: Player[] = players;
     userOneBullets.forEach((user) => {
@@ -125,7 +109,7 @@ export default function Shoot({
 
     handleSetPlayers(players_updated);
     const index = players_updated.findIndex((p) => p.user_name === playerName);
-    console.log("index: ", index);
+    // console.log("index: ", index);
     handleSetPlayer(index, players_updated);
     setUserOneBullets([]);
     setUserTwoBullets([]);
@@ -146,7 +130,6 @@ export default function Shoot({
 
           <ListShoots
             distance={1}
-            bullet={bulletOne}
             bulletTotal={oneShotTotal}
             playersOptions={playersOneShot}
             setUser={setUserOneBullets}
@@ -155,7 +138,6 @@ export default function Shoot({
           {twoShotTotal !== 0 && (
             <ListShoots
               distance={livePlayers.length > 3 ? 2 : 1}
-              bullet={bulletTwo}
               bulletTotal={twoShotTotal}
               playersOptions={playersTwoShot}
               setUser={setUserTwoBullets}

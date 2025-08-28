@@ -35,6 +35,7 @@ export function create_players(): Player[] {
       identity: identitys_list[i],
       arrow: 0,
       bullet: c.initial_bullet,
+      is_bot: i + 1 > 1 ? true : false,
       team: get_team(identitys_list[i]),
     };
     return new_player;

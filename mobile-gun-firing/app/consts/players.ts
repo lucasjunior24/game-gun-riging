@@ -7,6 +7,7 @@ export type Player = {
   character: Character | undefined;
   identity: Identity;
   is_alive: boolean;
+  is_bot: boolean;
   arrow: number;
   bullet: number;
   team: Team;
