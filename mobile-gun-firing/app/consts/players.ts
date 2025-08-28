@@ -1,4 +1,4 @@
-import { Character, Identity } from "./characters";
+import { Character, Identity, Team } from "./characters";
 
 export type Player = {
   user_name: string;
@@ -9,4 +9,5 @@ export type Player = {
   is_alive: boolean;
   arrow: number;
   bullet: number;
+  team: Team;
 };

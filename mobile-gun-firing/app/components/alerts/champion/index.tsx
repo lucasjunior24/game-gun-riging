@@ -4,19 +4,18 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Player } from "@/app/consts/players";
 
 import { ButtonBase } from "../../buttonBase";
+import { Team } from "@/app/consts/characters";
 
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
-  playerMoment: number;
-  players: Player[];
+  teamChampion: Team;
 }>;
 
 export default function ChampionModal({
   isVisible,
   onClose,
-  playerMoment,
-  players,
+  teamChampion,
 }: ShootProps) {
   return (
     <View>
@@ -24,7 +23,9 @@ export default function ChampionModal({
         <View style={styles.modalContent}>
           <View style={styles.titleContainer}>
             <Text />
-            <Text style={styles.title}>Parabens voce vencel</Text>
+            <Text style={styles.title}>
+              Parabens os {teamChampion} venceram
+            </Text>
             <Pressable onPress={onClose}>
               <MaterialIcons name="close" color={"#000"} size={26} />
             </Pressable>

@@ -35,6 +35,7 @@ export default function ListShoots({
             <CardShoot
               player={item}
               shoots={bullet}
+              bulletTotal={bulletTotal}
               setUser={setUser}
               userBullets={userBullets}
             />

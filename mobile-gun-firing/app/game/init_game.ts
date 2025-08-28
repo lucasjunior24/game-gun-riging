@@ -1,4 +1,4 @@
-import { characters, Identity } from "../consts/characters";
+import { characters, Identity, Team } from "../consts/characters";
 
 import { Player } from "../consts/players";
 
@@ -9,6 +9,19 @@ const identitys_list: Identity[] = [
   "Renegado",
   "Xerife",
 ];
+
+function get_team(identity: Identity): Team {
+  switch (identity) {
+    case "Assistente":
+      return "Xerife";
+    case "Xerife":
+      return "Xerife";
+    case "Renegado":
+      return "Renegado";
+    case "Fora da lei":
+      return "Fora da lei";
+  }
+}
 
 export function create_players(): Player[] {
   const users = ["Lucas", "Murilo", "Aragão", "Roberto", "Bot"];
@@ -22,6 +35,7 @@ export function create_players(): Player[] {
       identity: identitys_list[i],
       arrow: 0,
       bullet: c.initial_bullet,
+      team: get_team(identitys_list[i]),
     };
     return new_player;
   });
@@ -43,10 +57,6 @@ export function get_users_ids(): number[] {
   return user_ids;
 }
 
-export function get_player_of_the_moment(): string {
-  const xerife = get_xerife();
-  return String(xerife.user_id);
-}
 export function pass_player(
   player_moment: number,
   players_size: number

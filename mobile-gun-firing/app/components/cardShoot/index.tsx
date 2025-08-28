@@ -9,6 +9,7 @@ import { Dispatch } from "react";
 type ShootProps = {
   player: Player;
   shoots: number;
+  bulletTotal: number;
   userBullets: userBullets[];
   setUser: Dispatch<React.SetStateAction<userBullets[]>>;
 };
@@ -17,7 +18,7 @@ export default function CardShoot({
   player,
   shoots,
   userBullets,
-
+  bulletTotal,
   setUser,
 }: ShootProps) {
   const image = useImage(player.character?.avatar as string, {
@@ -74,7 +75,7 @@ export default function CardShoot({
         >
           <View style={{ width: 40 }}>
             <ButtonIcon
-              disabled={shoots === sumTotalShot}
+              disabled={bulletTotal === sumTotalShot}
               onPress={() => {
                 setUser((state) => {
                   const users = state.map((u) => {
@@ -96,7 +97,7 @@ export default function CardShoot({
                   ];
                 });
               }}
-              text={`${shoots - sumTotalShot} `}
+              text={`${bulletTotal - sumTotalShot}`}
             />
           </View>
           <View style={{ width: 40 }}>

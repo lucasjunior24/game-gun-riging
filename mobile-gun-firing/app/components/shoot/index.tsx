@@ -27,12 +27,13 @@ function parsePlayers(new_players: Player[], user: userBullets) {
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;
   onClose: () => void;
+  finishPlayer: () => void;
   playerMoment: number;
   playerName: string;
   players: Player[];
   shoots: DiceCombinationUndefined[];
   handleSetPlayers(players: Player[]): void;
-  handleSetPlayer(playerMoment: number): void;
+  handleSetPlayer(playerMoment: number, new_players: Player[]): void;
 }>;
 
 export interface userBullets {
@@ -46,6 +47,7 @@ export default function Shoot({
   playerMoment,
   players,
   shoots,
+  finishPlayer,
   playerName,
   handleSetPlayers,
   handleSetPlayer,
@@ -123,8 +125,11 @@ export default function Shoot({
 
     handleSetPlayers(players_updated);
     const index = players_updated.findIndex((p) => p.user_name === playerName);
-    handleSetPlayer(index);
-    onClose();
+    console.log("index: ", index);
+    handleSetPlayer(index, players_updated);
+    setUserOneBullets([]);
+    setUserTwoBullets([]);
+    finishPlayer();
   }
 
   return (

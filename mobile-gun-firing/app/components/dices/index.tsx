@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { Player } from "@/app/consts/players";
 import { DiceCombinationUndefined } from "@/app/consts/dice";
 import { pass_player } from "@/app/game/init_game";
@@ -30,12 +30,7 @@ const Dices = ({
 
   const [openModal, setOpenModal] = useState(false);
   const [totalDiceRolls, setTotalDiceRolls] = useState(0);
-
-  function passPlayer() {
-    const new_pl = pass_player(playerMoment, players.length);
-    const player = players[new_pl];
-
-    setPlayerMoment(new_pl, player.user_name);
+  function clearDices() {
     setDiceOne(undefined);
     setDiceTwo(undefined);
     setDiceThree(undefined);
@@ -43,8 +38,20 @@ const Dices = ({
     setDiceFive(undefined);
     setTotalDiceRolls(0);
   }
-  function handleSetPlayer(playerMoment: number) {
-    setPlayerMoment(playerMoment, playerName);
+  const passPlayer = useCallback(() => {
+    const new_pl = pass_player(playerMoment, players.length);
+    const player = players[new_pl];
+
+    setPlayerMoment(new_pl, player.user_name);
+    clearDices();
+  }, [playerMoment, players, setPlayerMoment]);
+
+  function handleSetPlayer(playerMoment: number, new_players: Player[]) {
+    const new_pl = pass_player(playerMoment, new_players.length);
+    const player = new_players[new_pl];
+
+    setPlayerMoment(new_pl, player.user_name);
+    // setPlayerMoment(playerMoment, playerName);
   }
   const player = players.filter((p) => p.user_name === playerName)[0];
   console.log("playerMoment: ", playerMoment);
@@ -86,7 +93,16 @@ const Dices = ({
     // runMetralhadora();
     setOpenModal(true);
   }
+  function handleClose() {
+    // runMetralhadora();
 
+    setOpenModal(false);
+  }
+
+  function finishPlayer() {
+    setOpenModal(false);
+    clearDices();
+  }
   if (player === undefined) {
     return <Text>loading player...</Text>;
   }
@@ -153,7 +169,8 @@ const Dices = ({
       <View>
         <Shoot
           isVisible={openModal}
-          onClose={() => setOpenModal(!openModal)}
+          onClose={handleClose}
+          finishPlayer={finishPlayer}
           playerMoment={playerMoment}
           players={players}
           shoots={sumShoots}

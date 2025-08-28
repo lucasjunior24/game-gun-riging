@@ -50,3 +50,4 @@ export const characters: Character[] = [
 ];
 
 export type Identity = "Xerife" | "Fora da lei" | "Renegado" | "Assistente";
+export type Team = Exclude<Identity, "Assistente">;

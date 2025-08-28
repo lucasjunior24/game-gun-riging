@@ -6,32 +6,48 @@ import Dices from "./components/dices";
 import { Player } from "./consts/players";
 import CardPlayer from "./components/cardPlayer";
 import ChampionModal from "./components/alerts/champion";
+import { Team } from "./consts/characters";
+import { is_the_champion } from "./consts/champion";
 // import CircularList from "./components/circularList";
 
 const Index = () => {
   const data = create_players();
 
-  const [Players] = useState<Player[]>(data);
-  const [livePlayers, setLivePlayers] = useState<Player[]>(Players);
+  const [players] = useState<Player[]>(data);
+  const [livePlayers, setLivePlayers] = useState<Player[]>(players);
 
   function handleSetPlayers(players: Player[]) {
     setLivePlayers(players);
   }
 
-  const [playerMoment, setPlayerMoment] = useState(3);
-  const [playerName, setPlayerName] = useState(Players[3].user_name);
+  const [playerMoment, setPlayerMoment] = useState(players.length - 1);
+  const [teamChampion, setTeamChampion] = useState<Team | undefined>(undefined);
+  const [playerName, setPlayerName] = useState(
+    players[players.length - 1].user_name
+  );
   function handlePlayerMoment(user_id: number, user_name: string) {
     setPlayerMoment(user_id);
     setPlayerName(user_name);
   }
 
   const [openModal, setOpenModal] = useState(false);
+  useEffect(() => {
+    if (livePlayers.length) {
+      setTeamChampion(is_the_champion(livePlayers));
+    }
+  }, [livePlayers]);
 
   useEffect(() => {
-    if (livePlayers.length === 1) {
+    if (teamChampion) {
       setOpenModal(true);
     }
-  }, [livePlayers.length]);
+  }, [teamChampion]);
+
+  console.log(
+    "team: ",
+    players.map((p) => p.team),
+    teamChampion
+  );
   return (
     <View style={styles.container}>
       <FlatList
@@ -49,13 +65,13 @@ const Index = () => {
         playerMoment={playerMoment}
         playerName={playerName}
       />
-
-      <ChampionModal
-        isVisible={openModal}
-        onClose={() => setOpenModal(!openModal)}
-        playerMoment={playerMoment}
-        players={livePlayers}
-      />
+      {teamChampion && (
+        <ChampionModal
+          isVisible={openModal}
+          onClose={() => setOpenModal(!openModal)}
+          teamChampion={teamChampion}
+        />
+      )}
     </View>
   );
 };
