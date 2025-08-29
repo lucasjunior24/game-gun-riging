@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet } from "react-native";
 import { Image, useImage } from "expo-image";
 
-import { Player } from "@/app/consts/players";
+import { Player } from "@/src/consts/players";
 import { ButtonIcon } from "../buttonIcon";
 import { userBullets } from "../shoot";
 import { Dispatch } from "react";

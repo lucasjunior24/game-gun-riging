@@ -1,4 +1,4 @@
-import { DiceCombinationUndefined, DiceOptions } from "@/app/consts/dice";
+import { DiceCombinationUndefined, DiceOptions } from "@/src/consts/dice";
 
 import { Pressable, View, Text, StyleSheet } from "react-native";
 

@@ -1,7 +1,7 @@
-import { Player } from "@/app/consts/players";
-import { DiceCombination } from "@/app/consts/dice";
+import { Player } from "@/src/consts/players";
+import { DiceCombination } from "@/src/consts/dice";
 
-import { play_dice } from "@/app/game/play_dice";
+import { play_dice } from "@/src/game/play_dice";
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 

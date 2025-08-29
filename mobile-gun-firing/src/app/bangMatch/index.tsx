@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
 
-import { create_players } from "./game/init_game";
-import Dices from "./components/dices";
-import { Player } from "./consts/players";
-import CardPlayer from "./components/cardPlayer";
-import ChampionModal from "./components/alerts/champion";
-import { Team } from "./consts/characters";
-import { is_the_champion } from "./consts/champion";
+import { create_players } from "@/src/game/init_game";
+import Dices from "@/src/components/dices";
+import { Player } from "@/src/consts/players";
+import CardPlayer from "@/src/components/cardPlayer";
+import ChampionModal from "@/src/components/alerts/champion";
+import { Team } from "@/src/consts/characters";
+import { is_the_champion } from "@/src/consts/champion";
 // import CircularList from "./components/circularList";
 
-const Index = () => {
+export default function BargMatch() {
   const data = create_players();
 
   const [players] = useState<Player[]>(data);
@@ -69,8 +69,7 @@ const Index = () => {
       )}
     </View>
   );
-};
-export default Index;
+}
 
 const styles = StyleSheet.create({
   container: {

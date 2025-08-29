@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Player } from "@/app/consts/players";
-import { DiceCombinationUndefined } from "@/app/consts/dice";
-import { pass_player } from "@/app/game/init_game";
-import { locked_dice, play_dice, sum_shoots } from "@/app/game/play_dice";
+import { Player } from "@/src/consts/players";
+import { DiceCombinationUndefined } from "@/src/consts/dice";
+import { pass_player } from "@/src/game/init_game";
+import { locked_dice, play_dice, sum_shoots } from "@/src/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import Shoot from "../shoot";
 import DiceItem from "./diceItem";
-import { sleep } from "@/app/utils/sleep";
+import { sleep } from "@/src/utils/sleep";
 
 interface DicesProps {
   players: Player[];
@@ -112,27 +112,22 @@ const Dices = ({
   }
 
   const sumShoots = sum_shoots(diceOne, diceTwo, diceThree, diceFour, diceFive);
-  // async function botRun() {
-  //   await sleep(2);
-  //   if (player.is_bot) {
-  //     console.log("playAllDices");
-  //     playAllDices();
-  //   }
-  // }
   const botExecuteDices = useCallback(async () => {
     await sleep(3);
     if (player.is_bot && totalDiceRolls < 3) {
       console.log("play All Dices: ", totalDiceRolls);
       playAllDices();
     }
-    if (totalDiceRolls === 2) {
+    if (player.is_bot && totalDiceRolls === 2) {
       await sleep(3);
       passPlayer();
     }
   }, [passPlayer, playAllDices, player.is_bot, totalDiceRolls]);
+
   useEffect(() => {
     botExecuteDices();
   }, [botExecuteDices]);
+
   console.log("shots:  ", sumShoots);
   if (player === undefined) {
     return <Text>loading player...</Text>;

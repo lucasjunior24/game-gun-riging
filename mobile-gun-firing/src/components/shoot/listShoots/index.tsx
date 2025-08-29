@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import CardShoot from "../../cardShoot";
-import { Player } from "@/app/consts/players";
+import { Player } from "@/src/consts/players";
 import { userBullets } from "..";
 import { Dispatch } from "react";
 

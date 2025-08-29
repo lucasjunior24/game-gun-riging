@@ -1,10 +1,9 @@
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
 import { PropsWithChildren } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Player } from "@/app/consts/players";
 
 import { ButtonBase } from "../../buttonBase";
-import { Team } from "@/app/consts/characters";
+import { Team } from "@/src/consts/characters";
 
 type ShootProps = PropsWithChildren<{
   isVisible: boolean;

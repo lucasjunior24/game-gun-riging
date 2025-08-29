@@ -1,0 +1,36 @@
+saber se ta logado no expo
+eas whoami
+
+fazer login
+eas login
+
+fazer logout
+eas logout
+
+gerar arquivo eas.json
+eas build:configure
+
+gerar apk
+eas build -p android --profile preview
+
+gerar eas build
+eas build -p android --profile production 
+
+with message
+eas build -p android --profile production  --message "second production deploy"
+
+limpar build 
+npx expo start --clear
+  
+
+onBackButtonPress
+onBackdropPress
+
+start 
+npx expo start -c
+
+show depences with pro
+npx expo-doctor 
+
+TO DO
+Atualizar fonts

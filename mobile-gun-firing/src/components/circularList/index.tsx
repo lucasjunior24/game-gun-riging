@@ -1,7 +1,7 @@
 import { Dimensions, View } from "react-native";
 import { Image, useImage } from "expo-image";
 
-import { characters } from "@/app/consts/characters";
+import { characters } from "@/src/consts/characters";
 export default function CircularList() {
   const image = useImage(characters[0].avatar as string, {
     maxWidth: 800,

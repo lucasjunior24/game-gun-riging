@@ -1,12 +1,12 @@
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Player } from "@/app/consts/players";
-import { players_to_shot } from "@/app/game/shoot";
+import { Player } from "@/src/consts/players";
+import { players_to_shot } from "@/src/game/shoot";
 
 import { ButtonBase } from "../buttonBase";
 
-import { DiceCombinationUndefined } from "@/app/consts/dice";
+import { DiceCombinationUndefined } from "@/src/consts/dice";
 
 import ListShoots from "./listShoots";
 function parsePlayers(new_players: Player[], user: userBullets) {

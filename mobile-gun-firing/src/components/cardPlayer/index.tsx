@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from "react-native";
 
-import { Player } from "@/app/consts/players";
+import { Player } from "@/src/consts/players";
 import { Image, useImage } from "expo-image";
 type CardPlayerProps = {
   player: Player;
