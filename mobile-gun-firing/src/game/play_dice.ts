@@ -1,62 +1,62 @@
 import {
-  DiceCombination,
-  DiceCombinationUndefined,
-  DICES,
+    DiceCombination,
+    DiceCombinationUndefined,
+    DICES,
 } from "../consts/dice";
 
 function get_random_dice(): number {
-  const min = 1;
-  const max = 6;
+    const min = 1;
+    const max = 6;
 
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+    return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 export function play_dice(): DiceCombination {
-  const new_dice = get_random_dice();
-  const data = DICES.filter((r) => r.dice === new_dice)[0];
-  const dice = block_dinamite(data);
-  return dice;
+    const new_dice = get_random_dice();
+    const data = DICES.filter((r) => r.dice === new_dice)[0];
+    const dice = block_dinamite(data);
+    return dice;
 }
 
 export function block_dinamite(dice: DiceCombination) {
-  if (dice.show === "Dinamite") {
-    dice.locked = true;
+    if (dice.show === "Dinamite") {
+        dice.locked = true;
+        return dice;
+    }
     return dice;
-  }
-  return dice;
 }
 
 export function locked_dice(
-  state: DiceCombinationUndefined
+    state: DiceCombinationUndefined
 ): DiceCombinationUndefined {
-  if (state) {
-    return { ...state, locked: !state.locked };
-  }
-  return state;
+    if (state) {
+        return { ...state, locked: !state.locked };
+    }
+    return state;
 }
 
 export function sum_shoots(
-  diceOne: DiceCombinationUndefined,
-  diceTwo: DiceCombinationUndefined,
-  diceTree: DiceCombinationUndefined,
-  diceFour: DiceCombinationUndefined,
-  diceFive: DiceCombinationUndefined
-): DiceCombinationUndefined[] {
-  const dices: DiceCombinationUndefined[] = [];
-  if (diceOne?.show === "1" || diceOne?.show === "2") {
-    dices.push(diceOne);
-  }
-  if (diceTwo?.show === "1" || diceTwo?.show === "2") {
-    dices.push(diceTwo);
-  }
-  if (diceTree?.show === "1" || diceTree?.show === "2") {
-    dices.push(diceTree);
-  }
-  if (diceFour?.show === "1" || diceFour?.show === "2") {
-    dices.push(diceFour);
-  }
-  if (diceFive?.show === "1" || diceFive?.show === "2") {
-    dices.push(diceFive);
-  }
-  return dices;
+    diceOne: DiceCombinationUndefined,
+    diceTwo: DiceCombinationUndefined,
+    diceTree: DiceCombinationUndefined,
+    diceFour: DiceCombinationUndefined,
+    diceFive: DiceCombinationUndefined
+): DiceCombination[] {
+    const dices: DiceCombination[] = [];
+    if (diceOne?.show === "1" || diceOne?.show === "2") {
+        dices.push(diceOne);
+    }
+    if (diceTwo?.show === "1" || diceTwo?.show === "2") {
+        dices.push(diceTwo);
+    }
+    if (diceTree?.show === "1" || diceTree?.show === "2") {
+        dices.push(diceTree);
+    }
+    if (diceFour?.show === "1" || diceFour?.show === "2") {
+        dices.push(diceFour);
+    }
+    if (diceFive?.show === "1" || diceFive?.show === "2") {
+        dices.push(diceFive);
+    }
+    return dices;
 }

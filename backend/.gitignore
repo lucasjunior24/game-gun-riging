@@ -37,3 +37,13 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+.env
+
+.env
+*.env
+.venv
+.ven
+__pycache__
+*/__pycache__
+.pytest_cache
+*/.pytest_cache
