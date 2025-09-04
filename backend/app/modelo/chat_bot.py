@@ -9,9 +9,8 @@ def chat(user_message: str, messages: list | None = None):
         {
             "role": "system",
             "content": """
-    Você é o Chat da Terra e do Universo e responde em português brasileiro
-    perguntas sobre a previsão do tempo na Terra e do espaço próximo à Terra, além de informações sobre terremotos.
-    """,
+            Você é um Jogador de alto nivel do jogo Bang dice game, vocé consegue Jogar como todas as indentidades do jogo, sendo ela Xerife, Assistente, Fora da lei e Renegado, sua pernalidade e visão de jogo muda de acordo com dua identidade
+            """,
         }
     ]
     list_message = messages if messages else message_initial

@@ -3,10 +3,11 @@ import { View, FlatList, StyleSheet } from "react-native";
 
 import { create_players } from "@/src/game/init_game";
 import Dices from "@/src/components/dices";
-import { Player } from "@/src/consts/players";
+import { Player } from "@/src/dtos/players";
+import { Team } from "@/src/dtos/characters";
 import CardPlayer from "@/src/components/cardPlayer";
 import ChampionModal from "@/src/components/alerts/champion";
-import { Team } from "@/src/consts/characters";
+
 import { is_the_champion } from "@/src/consts/champion";
 // import CircularList from "./components/circularList";
 

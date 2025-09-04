@@ -1,8 +1,4 @@
-import {
-    DiceCombination,
-    DiceCombinationUndefined,
-    DICES,
-} from "../consts/dice";
+import { DiceCombination, DiceCombinationUndefined, DICES } from "../dtos/dice";
 
 function get_random_dice(): number {
     const min = 1;

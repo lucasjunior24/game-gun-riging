@@ -1,4 +1,4 @@
-import { DiceCombination } from "../consts/dice";
+import { DiceCombination } from "../dtos/dice";
 import { ResponseDTO } from "../dtos/response";
 import { api } from "./axios";
 

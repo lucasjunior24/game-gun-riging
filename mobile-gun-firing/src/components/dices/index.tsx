@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
-import { Player } from "@/src/consts/players";
-import { DiceCombination, DiceCombinationUndefined } from "@/src/consts/dice";
+import { Player } from "@/src/dtos/players";
+import { DiceCombination, DiceCombinationUndefined } from "@/src/dtos/dice";
 import { pass_player } from "@/src/game/init_game";
 import { locked_dice, play_dice, sum_shoots } from "@/src/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
@@ -116,7 +116,6 @@ const Dices = ({
         diceOne?.locked,
         diceThree?.locked,
         diceTwo?.locked,
-        sumShoots.length,
     ]);
 
     // function runMetralhadora() {
