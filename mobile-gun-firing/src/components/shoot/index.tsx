@@ -1,18 +1,28 @@
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
-import { PropsWithChildren, useEffect, useMemo, useState } from "react";
+import {
+    PropsWithChildren,
+    useCallback,
+    useEffect,
+    useMemo,
+    useState,
+} from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Player } from "@/src/dtos/players";
 import { players_to_shot } from "@/src/game/shoot";
 
 import { ButtonBase } from "../buttonBase";
 
-import { DiceCombinationUndefined } from "@/src/dtos/dice";
+import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
 
 import ListShoots from "./listShoots";
+import { executeDices } from "@/src/api/dices";
+import { sleep } from "@/src/utils/sleep";
+// import { createPlayer } from "@/src/api/player";
+
 function parsePlayers(new_players: Player[], user: userBullets) {
     new_players = new_players
         .map((p) => {
-            if (p.user_name === user.index && p.bullet) {
+            if (p.user_name === user.user_name && p.bullet) {
                 p.bullet -= user.shoots;
                 if (p.bullet < 1) {
                     return;
@@ -31,13 +41,14 @@ type ShootProps = PropsWithChildren<{
     playerMoment: number;
     playerName: string;
     players: Player[];
+    currentPlayer: Player;
     shoots: DiceCombinationUndefined[];
     handleSetPlayers(players: Player[]): void;
     handleSetPlayer(playerMoment: number, new_players: Player[]): void;
 }>;
 
 export interface userBullets {
-    index: string;
+    user_name: string;
     shoots: number;
 }
 
@@ -46,6 +57,7 @@ export default function Shoot({
     onClose,
     playerMoment,
     players,
+    currentPlayer,
     shoots,
     finishPlayer,
     playerName,
@@ -97,7 +109,7 @@ export default function Shoot({
     const [userOneBullets, setUserOneBullets] = useState<userBullets[]>([]);
     const [userTwoBullets, setUserTwoBullets] = useState<userBullets[]>([]);
 
-    function execution() {
+    const runExecution = useCallback(() => {
         let players_updated: Player[] = players;
         userOneBullets.forEach((user) => {
             players_updated = parsePlayers(players_updated, user);
@@ -116,7 +128,83 @@ export default function Shoot({
         setUserOneBullets([]);
         setUserTwoBullets([]);
         finishPlayer();
-    }
+    }, [
+        finishPlayer,
+        handleSetPlayer,
+        handleSetPlayers,
+        playerName,
+        players,
+        userOneBullets,
+        userTwoBullets,
+    ]);
+
+    const botExecuteDices = useCallback(async () => {
+        const executionDTO: ExecuteDicesDTO = {
+            current_player: currentPlayer,
+            one_distance: {
+                bullet_total: oneShotTotal,
+                players_options: playersOneShot,
+                user_bullets: userOneBullets,
+            },
+            two_distance: undefined,
+        };
+        if (twoShotTotal !== 0) {
+            executionDTO.two_distance = {
+                bullet_total: twoShotTotal,
+                players_options: playersTwoShot,
+                user_bullets: userTwoBullets,
+            };
+        }
+
+        // await createPlayer(currentPlayer);
+        const data = await executeDices(executionDTO);
+        if (data) {
+            if (data.one_distance.user_bullets) {
+                await sleep(2);
+                setUserOneBullets(data.one_distance.user_bullets);
+            }
+            if (data.two_distance?.user_bullets) {
+                await sleep(2);
+                setUserTwoBullets(data.two_distance.user_bullets);
+            }
+        }
+    }, [
+        currentPlayer,
+        oneShotTotal,
+        playersOneShot,
+        playersTwoShot,
+        twoShotTotal,
+        userOneBullets,
+        userTwoBullets,
+    ]);
+
+    const runExecutionSleep = useCallback(async () => {
+        await sleep(3);
+        runExecution();
+    }, [runExecution]);
+
+    useEffect(() => {
+        if (
+            currentPlayer.is_bot &&
+            isVisible &&
+            userOneBullets.length === 0 &&
+            userTwoBullets.length === 0
+        ) {
+            console.log(currentPlayer.user_name);
+            botExecuteDices();
+        }
+        if (userOneBullets.length || userTwoBullets.length) {
+            runExecutionSleep();
+        }
+    }, [
+        botExecuteDices,
+        currentPlayer.is_bot,
+        currentPlayer.user_name,
+        isVisible,
+        runExecutionSleep,
+        userOneBullets.length,
+        userTwoBullets.length,
+    ]);
 
     return (
         <View>
@@ -157,7 +245,7 @@ export default function Shoot({
                     )}
 
                     <View style={{ padding: 10, paddingTop: 20 }}>
-                        <ButtonBase onPress={execution} text="Executar" />
+                        <ButtonBase onPress={runExecution} text="Executar" />
                     </View>
                 </View>
             </Modal>

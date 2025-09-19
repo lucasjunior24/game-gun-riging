@@ -15,7 +15,7 @@ class BaseDocument(DynamicDocument):
 
     @classmethod
     def get_by_id(cls, id: str):
-        document = cast(cls, cls.objects(id=id).first())
+        document = cls.objects(id=id).first()
         return document
 
     @classmethod

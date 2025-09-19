@@ -1,7 +1,7 @@
 import { Link } from "expo-router";
 import { View, Text, StyleSheet } from "react-native";
 
-export function Home() {
+export default function Home() {
     return (
         <View style={styles.container}>
             <View style={styles.card}>

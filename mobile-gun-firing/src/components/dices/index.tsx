@@ -82,11 +82,9 @@ const Dices = ({
             console.log();
 
             const valuesArray = Array.from(dices.values());
-            console.log("dices: ", valuesArray);
+            // console.log("dices: ", valuesArray);
             const result = await validDices(valuesArray);
-            console.log();
-            console.log("backend: ", result);
-            console.log();
+
             if (result) {
                 if (diceOne?.locked !== true) {
                     setDiceOne(result[0]);
@@ -145,7 +143,7 @@ const Dices = ({
         clearDices();
     }
 
-    const botExecuteDices = useCallback(async () => {
+    const botPlayAllDices = useCallback(async () => {
         await sleep(3);
         if (player.is_bot && totalDiceRolls < 3) {
             console.log("play All Dices: ", totalDiceRolls);
@@ -153,15 +151,16 @@ const Dices = ({
         }
         if (player.is_bot && totalDiceRolls === 2) {
             await sleep(3);
+            exeDices();
             // passPlayer();
         }
-    }, [passPlayer, playAllDices, player.is_bot, totalDiceRolls]);
+    }, [playAllDices, player.is_bot, totalDiceRolls]);
 
     useEffect(() => {
-        botExecuteDices();
-    }, [botExecuteDices]);
+        botPlayAllDices();
+    }, [botPlayAllDices]);
 
-    console.log("shots:  ", sumShoots);
+    // console.log("shots:  ", sumShoots);
     if (player === undefined) {
         return <Text>loading player...</Text>;
     }
@@ -247,6 +246,7 @@ const Dices = ({
                     finishPlayer={finishPlayer}
                     playerMoment={playerMoment}
                     players={players}
+                    currentPlayer={player}
                     shoots={sumShoots}
                     handleSetPlayers={handleSetPlayers}
                     playerName={playerName}

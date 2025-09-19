@@ -3,6 +3,7 @@ from fastapi import APIRouter
 
 
 from app.db.models.product import Product
+from app.dtos.character import IdentityDTO
 from app.dtos.dice import DiceShowDTO
 from app.dtos.response import (
     CreateProductDTO,
@@ -52,10 +53,15 @@ async def message(message: str, chat_id: str | None = None):
     responses={201: {"model": ResponseModelDTO[ChatDTO]}},
     response_model=ResponseModelDTO[ChatDTO],
 )
-async def execute(personagem: str = "Assistente", chat_id: str | None = None, dices: list[DiceShowDTO]):
+async def execute(
+    dices: list[DiceShowDTO],
+    identity: IdentityDTO = IdentityDTO.ASSISTENTE,
+    chat_id: str | None = None,
+):
     chat_controller = ChatController()
-    message = f"Voce é um jogador do Jogo Bang Dice Game, seu personagem é o {personagem}, voce acabou de rolar os dados e tirou 3 tiros de 1 distancia, em um dos seu lados está o Xerife e no outro lado um personagem que ainda não jogou, responda apenas dizendo em quem vai ser o tiro e o total de tiros"
-    data = chat_controller.add_message(message=message, chat_id=chat_id)
+    data = chat_controller.formart_to_execure_dices(
+        chat_id=chat_id, dices=dices, identity=identity
+    )
     return ResponseDTO(data=data)
 
 

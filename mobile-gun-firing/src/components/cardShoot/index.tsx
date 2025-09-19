@@ -30,7 +30,7 @@ export default function CardShoot({
         return <Text>Image is loading...</Text>;
     }
 
-    const user = userBullets.find((u) => u.index === player.user_name);
+    const user = userBullets.find((u) => u.user_name === player.user_name);
     const totalShot = userBullets.map((u) => u.shoots);
     const sumTotalShot = totalShot.reduce(
         (accumulator, currentValue) => accumulator + currentValue,
@@ -80,7 +80,7 @@ export default function CardShoot({
                             onPress={() => {
                                 setUser((state) => {
                                     const users = state.map((u) => {
-                                        if (u.index === player.user_name) {
+                                        if (u.user_name === player.user_name) {
                                             u.shoots += 1;
                                             return u;
                                         }
@@ -92,7 +92,7 @@ export default function CardShoot({
                                     return [
                                         ...state,
                                         {
-                                            index: player.user_name,
+                                            user_name: player.user_name,
                                             shoots: 1,
                                         },
                                     ];
@@ -108,7 +108,9 @@ export default function CardShoot({
                                 onPress={() => {
                                     setUser((state) => {
                                         const users = state.map((u) => {
-                                            if (u.index === player.user_name) {
+                                            if (
+                                                u.user_name === player.user_name
+                                            ) {
                                                 u.shoots -= 1;
                                                 return u;
                                             }

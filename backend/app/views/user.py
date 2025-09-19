@@ -3,6 +3,7 @@ from typing import Annotated
 from app.controllers.session import SessionController
 from app.controllers.user import UserController
 from app.db.models.user import UserDTO
+from app.dtos.players import PlayerDTO
 from app.dtos.session import SessionDTO
 from app.application_manager import ApplicationManager
 from app.views import app
@@ -96,3 +97,17 @@ async def create(
     data = user_controller.create(user)
 
     return ResponseDTO(data=data)
+
+
+@app.post(
+    "/player",
+    responses={201: {"model": ResponseModelDTO[PlayerDTO]}},
+    response_model=ResponseModelDTO[PlayerDTO],
+)
+async def create(
+    player: PlayerDTO,
+):
+    print(player.user_name)
+    print(player.user_id)
+
+    return ResponseDTO(data=player)

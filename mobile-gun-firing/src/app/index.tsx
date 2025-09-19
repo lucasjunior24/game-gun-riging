@@ -1,5 +1,5 @@
 import { StatusBar, View } from "react-native";
-import { Home } from "./home";
+import Home from "./home";
 
 const Index = () => {
     return (
