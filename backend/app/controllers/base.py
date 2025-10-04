@@ -1,6 +1,6 @@
 from typing import Optional, TypeVar
 from bson import ObjectId
-from mongomock import MongoClient
+from pymongo import MongoClient
 from app.dtos.base import DTO
 from app.util.config import DB_NAME
 from basic_components_fpp.exception import NotFoundAPI
@@ -27,6 +27,12 @@ class BaseController[T]:
         data = self.collection.insert_one(dto_json)
         new_dto = self.get_by_id(id=data.inserted_id, dto=self.dto)
         return new_dto
+
+    def update(self, data: DTO):
+        dto_json = data.model_dump(exclude=["id"], mode="json")
+        self.collection.update_one({"_id": data.id}, {"$set": dto_json})
+        updated_dto = self.get_by_id(id=str(data.id), dto=self.dto)
+        return updated_dto
 
     def get_filter(self, key: str, value: str, dto: U | T | None = None) -> U | T:
         data = self.collection.find_one({key: value})

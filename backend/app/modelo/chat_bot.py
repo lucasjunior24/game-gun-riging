@@ -5,15 +5,16 @@ from app.util.config import GROQ_API_KEY
 
 def chat(user_message: str, messages: list | None = None):
     print("Iniciando chat com o modelo. Digite 'sair' para encerrar.")
-    message_initial = [
-        {
-            "role": "system",
-            "content": """
-            Você é um Jogador de alto nivel do jogo Bang dice game, vocé consegue Jogar como todas as indentidades do jogo, sendo ela Xerife, Assistente, Fora da lei e Renegado, sua pernalidade e visão de jogo muda de acordo com dua identidade
-            """,
-        }
-    ]
-    list_message = messages if messages else message_initial
+    # message_initial = [
+    #     {
+    #         "role": "system",
+    #         "content": """
+    #         Você é um Jogador de alto nivel do jogo Bang dice game, vocé consegue Jogar como todas as indentidades do jogo, sendo ela Xerife, Assistente, Fora da lei e Renegado, sua pernalidade e visão de jogo muda de acordo com dua identidade
+    #         """,
+    #     }
+    # ]
+    # list_message = messages if messages else message_initial
+    list_message = messages
 
     while True:
         if user_message.lower() == "sair":

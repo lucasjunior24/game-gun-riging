@@ -2,6 +2,8 @@ from fastapi import Header, HTTPException
 
 from app.views.dice import dices_router
 from app.views.chat import chat_ai_router
+from app.views.match_game import match_game_router
+from app.views.history import history_router
 from app.db import connection
 from app.views.user import app
 from typing import Annotated
@@ -30,6 +32,8 @@ origins = [
 
 app.include_router(dices_router)
 app.include_router(chat_ai_router)
+app.include_router(match_game_router)
+app.include_router(history_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

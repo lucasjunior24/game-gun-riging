@@ -14,7 +14,7 @@ class TokenData(BaseModel):
     scopes: list[str] = []
 
 
-class createUserDTO(BaseModel):
+class CreateUserDTO(BaseModel):
     username: str
     email: str
     password: str

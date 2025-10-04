@@ -22,7 +22,7 @@ from app.auth.token import (
 )
 
 from app.dtos.response import ResponseDTO, ResponseModelDTO
-from app.dtos.user import Token, UserDBSessionDTO, createUserDTO
+from app.dtos.user import Token, UserDBSessionDTO, CreateUserDTO
 
 
 @app.post("/login")
@@ -89,7 +89,7 @@ async def read_system_status(use_id: str):
     response_model=ResponseModelDTO[UserDTO],
 )
 async def create(
-    user: createUserDTO,
+    user: CreateUserDTO,
 ):
     user_controller = ApplicationManager.get(UserController)
     hash = get_password_hash(user.password)

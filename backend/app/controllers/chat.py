@@ -12,18 +12,24 @@ class ChatController(BaseController[ChatDTO]):
     def __init__(self, dto: ChatDTO = ChatDTO):
         super().__init__(dto)
 
-    def add_message(self, message: str, chat_id: str | None) -> ChatDTO:
+    def add_message(self, new_message: str, chat_id: str | None) -> ChatDTO:
         chat_dto = self.get_by_id(id=chat_id) if chat_id else ChatDTO(user_id="lucas")
         messages = []
+        if chat_id is None:
+            messages_setup = self.run_setup("Fora da lei")
+            for message in messages_setup:
+                messages.append({"role": "system", "content": message})
+
         for m in chat_dto.messages:
             if m.author == "agent":
+                messages.append({"role": "assistant", "content": m.message})
                 messages.append({"role": "assistant", "content": m.message})
             else:
                 messages.append({"role": "user", "content": m.message})
 
-        response_chat = chat(message, messages)
+        response_chat = chat(new_message, messages)
 
-        chat_user = MessageDTO(message=message, author="user")
+        chat_user = MessageDTO(message=new_message, author="user")
         chat_agent = MessageDTO(message=response_chat, author="agent")
         chat_dto.messages.append(chat_user)
         chat_dto.messages.append(chat_agent)
@@ -83,3 +89,12 @@ class ChatController(BaseController[ChatDTO]):
         )
         message = f"Seu personagem sendo o {identity.value}," + message_dices
         return message
+
+    @staticmethod
+    def run_setup(personagem: str) -> list[str]:
+        messages: list[str] = []
+        initial_message = f"Voçê é um agente especialista em no Jogo Bang Dice Game, seu nome é Roberto e o seu personagem é o {personagem}."
+        second_message = "A partida vai começar agora e tem 5 jogadores, sendo eles: Pedro que é o Xerife, seguindo a ordem vem o Lucas, Murilo, Aragão e voçê sendo o quinto e ultimo jogador."
+        messages.append(initial_message)
+        messages.append(second_message)
+        return messages
