@@ -141,6 +141,7 @@ export default function Shoot({
     const botExecuteDices = useCallback(async () => {
         const executionDTO: ExecuteDicesDTO = {
             current_player: currentPlayer,
+            current_identity: String(currentPlayer.identity),
             one_distance: {
                 bullet_total: oneShotTotal,
                 players_options: playersOneShot,

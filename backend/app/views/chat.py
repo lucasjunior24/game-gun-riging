@@ -73,7 +73,8 @@ async def band(message: str, chat_id: str | None = None):
 async def teste(chat_id: str | None = None):
     chat_controller = ChatController()
     personagem = "Assistente"
-    message = f"Voçê acabou de rolar os dados e tirou 3 tiros de 1 distancia, em um dos seu lados está o Xerife e no outro lado o Aragão que ainda não jogou, responda apenas dizendo em quem vai ser o tiro e o total de tiros"
+    # message = f"Voçê acabou de rolar os dados e tirou 3 tiros de 1 distancia, em um dos seu lados está o Xerife e no outro lado o Aragão que ainda não jogou, responda apenas dizendo em quem vai ser o tiro e o total de tiros"
     # data = chat_controller.run_setup(personagem=personagem)
+    message = chat_controller.run_bollets(user_name="Lucas", personagem=personagem)
     data = chat_controller.add_message(new_message=message, chat_id=chat_id)
     return ResponseDTO(data=data)

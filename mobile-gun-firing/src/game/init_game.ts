@@ -24,7 +24,7 @@ function get_team(identity: Identity): Team {
 }
 
 export function create_players(): Player[] {
-    const users = ["Lucas", "Murilo", "Aragão", "Roberto", "Bot"];
+    const users = ["Lucas", "Murilo", "Aragão", "Roberto", "Pedro"];
     const players = characters.map((c, i) => {
         const new_player: Player = {
             user_id: i + 1,

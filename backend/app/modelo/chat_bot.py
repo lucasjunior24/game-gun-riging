@@ -1,5 +1,7 @@
 from litellm import completion
+from pydantic import BaseModel, Field
 
+from app.dtos.dice import ShotsDTO
 from app.util.config import GROQ_API_KEY
 
 
@@ -37,9 +39,7 @@ def chat(user_message: str, messages: list | None = None):
 def call_groq_api(messages, model="groq/llama-3.3-70b-versatile"):
     global tools
     response = completion(
-        model=model,
-        messages=messages,
-        api_key=GROQ_API_KEY,
+        model=model, messages=messages, api_key=GROQ_API_KEY, response_format=ShotsDTO
     )
     resposta_texto = response.choices[0].message
     # print(resposta_texto)
