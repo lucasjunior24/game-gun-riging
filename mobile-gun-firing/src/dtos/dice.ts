@@ -1,4 +1,4 @@
-import { userBullets } from "../components/shoot";
+import { userBullets } from "../components/shot";
 import { Player } from "./players";
 
 export type Dice = 1 | 2 | 3 | 4 | 5 | 6;

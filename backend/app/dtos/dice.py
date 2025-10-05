@@ -1,5 +1,5 @@
-from typing import Optional
-from pydantic import BaseModel, Field
+from typing import List, Optional
+from pydantic import BaseModel, Field, TypeAdapter
 
 from app.dtos.base import BaseDTO
 from app.dtos.players import PlayerDTO
@@ -18,12 +18,19 @@ class DiceShowDTO(BaseDTO):
 
 class UserBulletsDTO(BaseDTO):
     user_name: str = Field(default="")
-    shoots: int = Field(default=0)
+    shots: int = Field(default=0)
 
 
 class ShotsDTO(BaseModel):
     user_name: str = Field("Nome de quem vai receber os tiros")
-    shoots: int = Field("Quantidade de tiros que você vai dar nesse jogador")
+    shots: int = Field("Quantidade de tiros que você vai dar nesse jogador")
+
+
+class ListShotsDTO(BaseModel):
+    shots_list: list[ShotsDTO] = Field("lista de shots")
+
+
+shorts_list_adapter = TypeAdapter(List[ShotsDTO])
 
 
 class ExecuteDistanceDTO(BaseDTO):

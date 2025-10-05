@@ -31,7 +31,7 @@ export function locked_dice(
     return state;
 }
 
-export function sum_shoots(
+export function sum_shots(
     diceOne: DiceCombinationUndefined,
     diceTwo: DiceCombinationUndefined,
     diceTree: DiceCombinationUndefined,

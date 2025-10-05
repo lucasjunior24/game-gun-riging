@@ -2,7 +2,7 @@ from app.controllers.base import BaseController
 from app.db.models.chat import ChatDTO
 from app.db.models.message import MessageDTO
 from app.dtos.character import IdentityDTO
-from app.dtos.dice import DiceShowDTO
+from app.dtos.dice import DiceShowDTO, ExecuteDistanceDTO
 from app.modelo.chat_bot import chat
 import json
 
@@ -139,7 +139,27 @@ class ChatController(BaseController[ChatDTO]):
         dices_total: str,
         players: list[str],
     ):
-        m = f"Voçê acabou de rolar os dados e tirou {dices_total} tiros de {dice} distancia, e pode atirar ao no {players[0]} ou no {players[1]}."
-        message = f"Voce é o jogador {user_name} do Jogo Bang Dice Game, seu personagem é o {personagem}. {m} Responda apenas dizendo em quem vai ser o tiro e o total de tiros."
+        m = f"Voçê acabou de rolar os dados e tirou {dices_total} tiros de {dice} distancia, e pode atirar ou no {players[0]}"
+        if len(players) > 1:
+            m = f"{m} ou no {players[1]}"
+        message = f"Voce é o jogador {user_name} do Jogo Bang Dice Game, seu personagem é o {personagem}. {m}. Responda apenas dizendo em quem vai ser o tiro e o total de tiros."
 
+        return message
+
+    @staticmethod
+    def exec_bullets_chat(
+        execution: ExecuteDistanceDTO, personagem: str, user_name: str, dice: str
+    ) -> str:
+        playes_name = []
+        playes_name.append(execution.players_options[0].user_name)
+        if len(execution.players_options) > 1:
+            playes_name.append(execution.players_options[1].user_name)
+
+        message = ChatController.format_message_dices(
+            dice=dice,
+            dices_total=str(execution.bullet_total),
+            personagem=personagem,
+            players=playes_name,
+            user_name=user_name,
+        )
         return message

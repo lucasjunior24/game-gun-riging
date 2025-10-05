@@ -14,7 +14,7 @@ import { ButtonBase } from "../buttonBase";
 
 import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
 
-import ListShoots from "./listShoots";
+import ListShots from "./listShots";
 import { executeDices } from "@/src/api/dices";
 import { sleep } from "@/src/utils/sleep";
 // import { createPlayer } from "@/src/api/player";
@@ -23,7 +23,7 @@ function parsePlayers(new_players: Player[], user: userBullets) {
     new_players = new_players
         .map((p) => {
             if (p.user_name === user.user_name && p.bullet) {
-                p.bullet -= user.shoots;
+                p.bullet -= user.shots;
                 if (p.bullet < 1) {
                     return;
                 }
@@ -42,23 +42,23 @@ type ShootProps = PropsWithChildren<{
     playerName: string;
     players: Player[];
     currentPlayer: Player;
-    shoots: DiceCombinationUndefined[];
+    shots: DiceCombinationUndefined[];
     handleSetPlayers(players: Player[]): void;
     handleSetPlayer(playerMoment: number, new_players: Player[]): void;
 }>;
 
 export interface userBullets {
     user_name: string;
-    shoots: number;
+    shots: number;
 }
 
-export default function Shoot({
+export default function Shot({
     isVisible,
     onClose,
     playerMoment,
     players,
     currentPlayer,
-    shoots,
+    shots,
     finishPlayer,
     playerName,
     handleSetPlayers,
@@ -99,12 +99,12 @@ export default function Shoot({
     }, [livePlayers, optionsTwoShoot, playerName]);
 
     const oneShotTotal = useMemo(() => {
-        return shoots.filter((s) => s?.show === "1").length;
-    }, [shoots]);
+        return shots.filter((s) => s?.show === "1").length;
+    }, [shots]);
 
     const twoShotTotal = useMemo(() => {
-        return shoots.filter((s) => s?.show === "2").length;
-    }, [shoots]);
+        return shots.filter((s) => s?.show === "2").length;
+    }, [shots]);
 
     const [userOneBullets, setUserOneBullets] = useState<userBullets[]>([]);
     const [userTwoBullets, setUserTwoBullets] = useState<userBullets[]>([]);
@@ -228,7 +228,7 @@ export default function Shoot({
                         </Pressable>
                     </View>
 
-                    <ListShoots
+                    <ListShots
                         distance={1}
                         bulletTotal={oneShotTotal}
                         playersOptions={playersOneShot}
@@ -236,7 +236,7 @@ export default function Shoot({
                         userBullets={userOneBullets}
                     />
                     {twoShotTotal !== 0 && (
-                        <ListShoots
+                        <ListShots
                             distance={livePlayers.length > 3 ? 2 : 1}
                             bulletTotal={twoShotTotal}
                             playersOptions={playersTwoShot}

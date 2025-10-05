@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Player } from "@/src/dtos/players";
 import { DiceCombination, DiceCombinationUndefined } from "@/src/dtos/dice";
 import { pass_player } from "@/src/game/init_game";
-import { locked_dice, play_dice, sum_shoots } from "@/src/game/play_dice";
+import { locked_dice, play_dice, sum_shots } from "@/src/game/play_dice";
 import { View, Text, StyleSheet, Pressable } from "react-native";
-import Shoot from "../shoot";
+import Shot from "../shot";
 import DiceItem from "./diceItem";
 import { sleep } from "@/src/utils/sleep";
 import { validDices } from "@/src/api/dices";
@@ -57,13 +57,7 @@ const Dices = ({
     }
     const player = players.filter((p) => p.user_name === playerName)[0];
     console.log("playerMoment: ", playerMoment);
-    const sumShoots = sum_shoots(
-        diceOne,
-        diceTwo,
-        diceThree,
-        diceFour,
-        diceFive
-    );
+    const sumShots = sum_shots(diceOne, diceTwo, diceThree, diceFour, diceFive);
     const playAllDices = useCallback(async () => {
         if (
             diceOne?.locked !== true ||
@@ -240,14 +234,14 @@ const Dices = ({
                 </View>
             </View>
             <View>
-                <Shoot
+                <Shot
                     isVisible={openModal}
                     onClose={handleClose}
                     finishPlayer={finishPlayer}
                     playerMoment={playerMoment}
                     players={players}
                     currentPlayer={player}
-                    shoots={sumShoots}
+                    shots={sumShots}
                     handleSetPlayers={handleSetPlayers}
                     playerName={playerName}
                     handleSetPlayer={handleSetPlayer}

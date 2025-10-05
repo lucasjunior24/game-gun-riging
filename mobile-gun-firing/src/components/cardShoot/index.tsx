@@ -3,7 +3,7 @@ import { Image, useImage } from "expo-image";
 
 import { Player } from "@/src/dtos/players";
 import { ButtonIcon } from "../buttonIcon";
-import { userBullets } from "../shoot";
+import { userBullets } from "../shot";
 import { Dispatch } from "react";
 
 type ShootProps = {
@@ -31,7 +31,7 @@ export default function CardShoot({
     }
 
     const user = userBullets.find((u) => u.user_name === player.user_name);
-    const totalShot = userBullets.map((u) => u.shoots);
+    const totalShot = userBullets.map((u) => u.shots);
     const sumTotalShot = totalShot.reduce(
         (accumulator, currentValue) => accumulator + currentValue,
         0
@@ -81,7 +81,7 @@ export default function CardShoot({
                                 setUser((state) => {
                                     const users = state.map((u) => {
                                         if (u.user_name === player.user_name) {
-                                            u.shoots += 1;
+                                            u.shots += 1;
                                             return u;
                                         }
                                         return u;
@@ -93,7 +93,7 @@ export default function CardShoot({
                                         ...state,
                                         {
                                             user_name: player.user_name,
-                                            shoots: 1,
+                                            shots: 1,
                                         },
                                     ];
                                 });
@@ -104,14 +104,14 @@ export default function CardShoot({
                     <View style={{ width: 40 }}>
                         {user && (
                             <ButtonIcon
-                                disabled={user.shoots === 0}
+                                disabled={user.shots === 0}
                                 onPress={() => {
                                     setUser((state) => {
                                         const users = state.map((u) => {
                                             if (
                                                 u.user_name === player.user_name
                                             ) {
-                                                u.shoots -= 1;
+                                                u.shots -= 1;
                                                 return u;
                                             }
                                             return u;
@@ -119,7 +119,7 @@ export default function CardShoot({
                                         return users;
                                     });
                                 }}
-                                text={`- ${user.shoots}`}
+                                text={`- ${user.shots}`}
                                 color="red"
                             />
                         )}
