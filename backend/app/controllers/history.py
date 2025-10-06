@@ -20,6 +20,16 @@ class HistoryController(BaseController[HistoryDTO]):
         history_save = self.update(history)
         return history_save
 
+    def add_messages_by_game_id(
+        self, messages: list[MessageDTO], game_id: str
+    ) -> HistoryDTO:
+        history = self.get_filter("game_id", game_id)
+        for message in messages:
+            history.messages.append(message)
+
+        history_save = self.update(history)
+        return history_save
+
     @staticmethod
     def create_messages_dto(messages: list[str]) -> list[MessageDTO]:
         messages_dto: list[MessageDTO] = []

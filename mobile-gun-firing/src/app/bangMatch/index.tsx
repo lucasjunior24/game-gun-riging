@@ -9,6 +9,7 @@ import CardPlayer from "@/src/components/cardPlayer";
 import ChampionModal from "@/src/components/alerts/champion";
 
 import { is_the_champion } from "@/src/consts/champion";
+import { useLocalSearchParams } from "expo-router";
 // import CircularList from "./components/circularList";
 
 export default function BargMatch() {

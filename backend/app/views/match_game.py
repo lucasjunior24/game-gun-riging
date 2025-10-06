@@ -5,6 +5,8 @@ from app.auth.token import get_token
 from app.controllers.game import GameController
 
 
+from app.controllers.history import HistoryController
+from app.dtos.history import HistoryDTO
 from app.dtos.match_game import CreateGameDTO, MatchGameDTO
 from app.dtos.response import (
     CreateProductDTO,
@@ -45,8 +47,13 @@ async def new_match_game(
         created_by=game.player_name,
         updated_by=game.player_name,
     )
-    data = game_controller.create(game_dto)
-    return ResponseDTO(data=data, message="success")
+    new_game = game_controller.create(game_dto)
+
+    history_controller = ApplicationManager.get(HistoryController)
+    history_dto = HistoryDTO(messages=[], game_id=str(new_game.id))
+    history_controller.create(history_dto)
+
+    return ResponseDTO(data=new_game, message="success")
 
 
 @match_game_router.put("", response_model=ResponseModelDTO[ProductModelDTO])

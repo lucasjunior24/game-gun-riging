@@ -37,6 +37,8 @@ export type ExecuteDistanceDTO = {
 export type ExecuteDicesDTO = {
     current_player: Player;
     current_identity: string;
+    game_id: string;
+    table_situation: string;
     one_distance: ExecuteDistanceDTO;
     two_distance?: ExecuteDistanceDTO;
 };

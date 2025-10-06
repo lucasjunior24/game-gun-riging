@@ -40,7 +40,9 @@ class ExecuteDistanceDTO(BaseDTO):
 
 
 class ExecuteDicesDTO(BaseDTO):
+    game_id: str
     current_player: PlayerDTO
     current_identity: str = Field(default="")
+    table_situation: str = Field(default="")
     one_distance: ExecuteDistanceDTO
     two_distance: Optional[ExecuteDistanceDTO] = Field(default=None)

@@ -17,6 +17,7 @@ import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
 import ListShots from "./listShots";
 import { executeDices } from "@/src/api/dices";
 import { sleep } from "@/src/utils/sleep";
+import { useLocalSearchParams } from "expo-router";
 // import { createPlayer } from "@/src/api/player";
 
 function parsePlayers(new_players: Player[], user: userBullets) {
@@ -65,7 +66,7 @@ export default function Shot({
     handleSetPlayer,
 }: ShootProps) {
     const livePlayers = players;
-
+    const { game_id } = useLocalSearchParams();
     const optionsOneShoot = players_to_shot(
         playerMoment + 1,
         livePlayers.length,
@@ -137,10 +138,24 @@ export default function Shot({
         userOneBullets,
         userTwoBullets,
     ]);
+    const tableSituation = useMemo(() => {
+        let table_situation = "";
+        const total_players = `Atualmente o jogo tem ${players.length} Jogadores sendo eles: `;
+        players.forEach((p) => {
+            table_situation += `O jogador ${p.user_name} que tem ${p.bullet} vidas, `;
+        });
+        return total_players + table_situation;
+    }, [players]);
 
     const botExecuteDices = useCallback(async () => {
+        console.log("game_id: ", game_id);
+
+        // console.log(tableSituation);
+        console.log(typeof game_id);
         const executionDTO: ExecuteDicesDTO = {
+            game_id: String(game_id),
             current_player: currentPlayer,
+            table_situation: tableSituation,
             current_identity: String(currentPlayer.identity),
             one_distance: {
                 bullet_total: oneShotTotal,
@@ -171,9 +186,11 @@ export default function Shot({
         }
     }, [
         currentPlayer,
+        game_id,
         oneShotTotal,
         playersOneShot,
         playersTwoShot,
+        tableSituation,
         twoShotTotal,
         userOneBullets,
         userTwoBullets,

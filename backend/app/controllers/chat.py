@@ -1,8 +1,11 @@
+from app.application_manager import ApplicationManager
 from app.controllers.base import BaseController
+from app.controllers.history import HistoryController
 from app.db.models.chat import ChatDTO
 from app.db.models.message import MessageDTO
 from app.dtos.character import IdentityDTO
 from app.dtos.dice import DiceShowDTO, ExecuteDistanceDTO
+from app.dtos.history import HistoryDTO
 from app.modelo.chat_bot import chat
 import json
 
@@ -13,30 +16,51 @@ class ChatController(BaseController[ChatDTO]):
     def __init__(self, dto: ChatDTO = ChatDTO):
         super().__init__(dto)
 
-    def add_message(self, new_message: str, chat_id: str | None = None):
-        chat_dto = self.get_by_id(id=chat_id) if chat_id else ChatDTO(user_id="lucas")
+    def add_message(
+        self,
+        new_message: str,
+        table_situation: str | None = None,
+        game_id: str | None = None,
+    ):
+        history_controller = ApplicationManager.get(HistoryController)
+        history_dto = None
+        if game_id:
+            history_dto = history_controller.get_filter("game_id", game_id)
+        if history_dto is None:
+            history_dto = HistoryDTO(game_id=game_id, messages=[])
+
         messages = []
-        if chat_id is None:
+        if history_dto.messages == []:
             messages_setup = self.run_setup()
             for message in messages_setup:
                 messages.append({"role": "system", "content": message})
+                history_dto.messages.append(
+                    MessageDTO(author="system", message=message)
+                )
 
-        for m in chat_dto.messages:
-            if m.author == "agent":
-                messages.append({"role": "assistant", "content": m.message})
-                messages.append({"role": "assistant", "content": m.message})
-            else:
-                messages.append({"role": "user", "content": m.message})
+        for index, m in enumerate(history_dto.messages):
+            if index != 0:
+                if m.author == "system":
+                    messages.append({"role": "system", "content": m.message})
+                if m.author == "agent":
+                    messages.append({"role": "assistant", "content": m.message})
+                else:
+                    messages.append({"role": "user", "content": m.message})
+
+        if table_situation:
+            messages.append({"role": "system", "content": table_situation})
+            history_dto.messages.append(
+                MessageDTO(author="system", message=table_situation)
+            )
 
         response_chat = chat(new_message, messages)
         python_dict = json.loads(response_chat)
         # return python_dict
         chat_user = MessageDTO(message=new_message, author="user")
         chat_agent = MessageDTO(message=response_chat, author="agent")
-        chat_dto.messages.append(chat_user)
-        chat_dto.messages.append(chat_agent)
+        # history_dto.messages.append(chat_agent)
 
-        # data = self.create(chat_dto)
+        data = history_controller.update(history_dto)
         return python_dict
 
     def formart_to_execure_dices(
@@ -148,7 +172,10 @@ class ChatController(BaseController[ChatDTO]):
 
     @staticmethod
     def exec_bullets_chat(
-        execution: ExecuteDistanceDTO, personagem: str, user_name: str, dice: str
+        execution: ExecuteDistanceDTO,
+        personagem: str,
+        user_name: str,
+        dice: str,
     ) -> str:
         playes_name = []
         playes_name.append(execution.players_options[0].user_name)

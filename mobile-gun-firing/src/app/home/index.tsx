@@ -1,16 +1,40 @@
-import { Link } from "expo-router";
-import { View, Text, StyleSheet } from "react-native";
-
+import { createGame } from "@/src/api/match_game";
+import { useState } from "react";
+import { View, Text, StyleSheet, Pressable } from "react-native";
+import { useRouter } from "expo-router";
 export default function Home() {
+    const [isLoading, setIsLoading] = useState(false);
+    const router = useRouter();
+    async function handleCreateGame() {
+        try {
+            setIsLoading(true);
+            const data = await createGame({ player_name: "Lucas" });
+            console.log(data._id);
+            router.push({
+                pathname: `/bangMatch`,
+                params: { game_id: data._id },
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }
     return (
         <View style={styles.container}>
             <View style={styles.card}>
                 <Text style={styles.parentTitle}>Bem vindo ao bang</Text>
             </View>
             <View style={styles.card}>
-                <Link style={styles.button} href={"/bangMatch"} asChild>
-                    <Text style={styles.buttonText}>Iniciar nova partida</Text>
-                </Link>
+                <View style={styles.card}>
+                    <Pressable
+                        onPress={handleCreateGame}
+                        style={[styles.button]}
+                        disabled={isLoading}
+                    >
+                        <Text style={styles.buttonText}>
+                            Iniciar nova partida
+                        </Text>
+                    </Pressable>
+                </View>
             </View>
         </View>
     );

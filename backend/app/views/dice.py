@@ -52,7 +52,11 @@ async def execution_dices(
             "1",
         )
 
-        response_one = chat_controller.add_message(new_message=teste_message)
+        response_one = chat_controller.add_message(
+            new_message=teste_message,
+            table_situation=execution.table_situation,
+            game_id=execution.game_id,
+        )
         shots_one = ListShotsDTO(**response_one)
         for shot in shots_one.shots_list:
             shot_one = UserBulletsDTO(**shot.model_dump(mode="json"))
@@ -65,7 +69,11 @@ async def execution_dices(
             execution.current_player.user_name,
             "2",
         )
-        data = chat_controller.add_message(new_message=message_two)
+        data = chat_controller.add_message(
+            new_message=message_two,
+            table_situation=execution.table_situation,
+            game_id=execution.game_id,
+        )
         shots_two = ListShotsDTO(**data)
         for shot in shots_two.shots_list:
             shot_two = UserBulletsDTO(**shot.model_dump(mode="json"))
