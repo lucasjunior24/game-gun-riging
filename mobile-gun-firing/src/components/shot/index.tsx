@@ -21,7 +21,7 @@ import { useLocalSearchParams } from "expo-router";
 // import { createPlayer } from "@/src/api/player";
 
 function parsePlayers(new_players: Player[], user: userBullets) {
-    new_players = new_players
+    const players = new_players
         .map((p) => {
             if (p.user_name === user.user_name && p.bullet) {
                 p.bullet -= user.shots;
@@ -29,11 +29,18 @@ function parsePlayers(new_players: Player[], user: userBullets) {
                     return;
                 }
                 return p;
+            } else if (
+                p.user_name === user.user_name &&
+                p.bullet < 1 &&
+                p.is_alive
+            ) {
+                p.is_alive = false;
+                return p;
             }
             return p;
         })
         .filter((p) => p !== undefined);
-    return new_players;
+    return players;
 }
 type ShootProps = PropsWithChildren<{
     isVisible: boolean;
@@ -140,9 +147,13 @@ export default function Shot({
     ]);
     const tableSituation = useMemo(() => {
         let table_situation = "";
-        const total_players = `Atualmente o jogo tem ${players.length} Jogadores sendo eles: `;
+        const total_players = `Atualmente o jogo tem ${players.length} Jogadores sendo eles:`;
         players.forEach((p) => {
-            table_situation += `O jogador ${p.user_name} que tem ${p.bullet} vidas, `;
+            if (p.identity === "Xerife") {
+                table_situation += ` O jogador ${p.user_name} que tem ${p.bullet} vidas e é o Xerife.`;
+            } else {
+                table_situation += ` O jogador ${p.user_name} que tem ${p.bullet} vidas.`;
+            }
         });
         return total_players + table_situation;
     }, [players]);

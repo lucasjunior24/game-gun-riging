@@ -9,7 +9,7 @@ import CardPlayer from "@/src/components/cardPlayer";
 import ChampionModal from "@/src/components/alerts/champion";
 
 import { is_the_champion } from "@/src/consts/champion";
-import { useLocalSearchParams } from "expo-router";
+
 // import CircularList from "./components/circularList";
 
 export default function BargMatch() {
@@ -35,6 +35,11 @@ export default function BargMatch() {
     }
 
     const [openModal, setOpenModal] = useState(false);
+    console.log(
+        livePlayers.forEach((p) => {
+            console.log(p.user_name, p.bullet, p.is_alive);
+        })
+    );
     useEffect(() => {
         if (livePlayers.length) {
             setTeamChampion(is_the_champion(livePlayers));
