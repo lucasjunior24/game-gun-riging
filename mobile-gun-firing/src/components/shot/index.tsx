@@ -17,25 +17,28 @@ import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
 import ListShots from "./listShots";
 import { executeDices } from "@/src/api/dices";
 import { sleep } from "@/src/utils/sleep";
-import { useLocalSearchParams } from "expo-router";
+import { GameStatus } from "@/src/dtos/game_match";
+
 // import { createPlayer } from "@/src/api/player";
 
 function parsePlayers(new_players: Player[], user: userBullets) {
+    const players = new_players.map((p) => {
+        if (p.user_name === user.user_name && p.bullet) {
+            p.bullet -= user.shots;
+            if (p.bullet < 1) {
+                p.is_alive = false;
+            }
+            return p;
+        }
+        return p;
+    });
+    return players;
+}
+function checkPlayersIsLive(new_players: Player[]) {
     const players = new_players
         .map((p) => {
-            if (p.user_name === user.user_name && p.bullet) {
-                p.bullet -= user.shots;
-                if (p.bullet < 1) {
-                    return;
-                }
-                return p;
-            } else if (
-                p.user_name === user.user_name &&
-                p.bullet < 1 &&
-                p.is_alive
-            ) {
-                p.is_alive = false;
-                return p;
+            if (p.is_alive === false) {
+                return undefined;
             }
             return p;
         })
@@ -44,13 +47,15 @@ function parsePlayers(new_players: Player[], user: userBullets) {
 }
 type ShootProps = PropsWithChildren<{
     isVisible: boolean;
-    onClose: () => void;
-    finishPlayer: () => void;
     playerMoment: number;
+    gameId: string;
     playerName: string;
+    gameStatus: GameStatus;
     players: Player[];
     currentPlayer: Player;
     shots: DiceCombinationUndefined[];
+    onClose: () => void;
+    finishPlayer: () => void;
     handleSetPlayers(players: Player[]): void;
     handleSetPlayer(playerMoment: number, new_players: Player[]): void;
 }>;
@@ -62,18 +67,20 @@ export interface userBullets {
 
 export default function Shot({
     isVisible,
-    onClose,
+    gameId,
     playerMoment,
     players,
     currentPlayer,
     shots,
-    finishPlayer,
+    gameStatus,
     playerName,
+    onClose,
+    finishPlayer,
     handleSetPlayers,
     handleSetPlayer,
 }: ShootProps) {
     const livePlayers = players;
-    const { game_id } = useLocalSearchParams();
+
     const optionsOneShoot = players_to_shot(
         playerMoment + 1,
         livePlayers.length,
@@ -127,6 +134,13 @@ export default function Shot({
             players_updated = parsePlayers(players_updated, user);
         });
 
+        players_updated = checkPlayersIsLive(players_updated);
+        console.log(
+            players_updated.map(
+                (p) => `${p.user_name} - ${p.bullet} - ${p.is_alive}`
+            )
+        );
+
         handleSetPlayers(players_updated);
         const index = players_updated.findIndex(
             (p) => p.user_name === playerName
@@ -159,12 +173,8 @@ export default function Shot({
     }, [players]);
 
     const botExecuteDices = useCallback(async () => {
-        console.log("game_id: ", game_id);
-
-        // console.log(tableSituation);
-        console.log(typeof game_id);
         const executionDTO: ExecuteDicesDTO = {
-            game_id: String(game_id),
+            game_id: String(gameId),
             current_player: currentPlayer,
             table_situation: tableSituation,
             current_identity: String(currentPlayer.identity),
@@ -197,7 +207,7 @@ export default function Shot({
         }
     }, [
         currentPlayer,
-        game_id,
+        gameId,
         oneShotTotal,
         playersOneShot,
         playersTwoShot,
@@ -212,27 +222,32 @@ export default function Shot({
         runExecution();
     }, [runExecution]);
 
+    console.log(gameStatus);
     useEffect(() => {
         if (
+            gameStatus === "Running" &&
             currentPlayer.is_bot &&
             isVisible &&
             userOneBullets.length === 0 &&
             userTwoBullets.length === 0
         ) {
-            console.log(currentPlayer.user_name);
             botExecuteDices();
         }
-        if (userOneBullets.length || userTwoBullets.length) {
+        if (
+            gameStatus === "Running" &&
+            (userOneBullets.length || userTwoBullets.length)
+        ) {
             runExecutionSleep();
         }
     }, [
-        botExecuteDices,
         currentPlayer.is_bot,
         currentPlayer.user_name,
+        gameStatus,
         isVisible,
-        runExecutionSleep,
         userOneBullets.length,
         userTwoBullets.length,
+        botExecuteDices,
+        runExecutionSleep,
     ]);
 
     return (

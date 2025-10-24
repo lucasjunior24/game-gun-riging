@@ -8,11 +8,14 @@ import Shot from "../shot";
 import DiceItem from "./diceItem";
 import { sleep } from "@/src/utils/sleep";
 import { validDices } from "@/src/api/dices";
+import { GameStatus } from "@/src/dtos/game_match";
 
 interface DicesProps {
     players: Player[];
     playerMoment: number;
     playerName: string;
+    gameId: string;
+    gameStatus: GameStatus;
     handleSetPlayers(players: Player[]): void;
     setPlayerMoment: (user_id: number, user_name: string) => void;
 }
@@ -21,6 +24,8 @@ const Dices = ({
     players,
     playerMoment,
     playerName,
+    gameId,
+    gameStatus,
     handleSetPlayers,
     setPlayerMoment,
 }: DicesProps) => {
@@ -140,7 +145,7 @@ const Dices = ({
     const botPlayAllDices = useCallback(async () => {
         await sleep(3);
         if (player.is_bot && totalDiceRolls < 3) {
-            console.log("play All Dices: ", totalDiceRolls);
+            // console.log("play All Dices: ", totalDiceRolls);
             await playAllDices();
         }
         if (player.is_bot && totalDiceRolls === 2) {
@@ -151,8 +156,10 @@ const Dices = ({
     }, [playAllDices, player.is_bot, totalDiceRolls]);
 
     useEffect(() => {
-        botPlayAllDices();
-    }, [botPlayAllDices]);
+        if (gameStatus === "Running") {
+            botPlayAllDices();
+        }
+    }, [botPlayAllDices, gameStatus]);
 
     // console.log("shots:  ", sumShoots);
     if (player === undefined) {
@@ -234,18 +241,22 @@ const Dices = ({
                 </View>
             </View>
             <View>
-                <Shot
-                    isVisible={openModal}
-                    onClose={handleClose}
-                    finishPlayer={finishPlayer}
-                    playerMoment={playerMoment}
-                    players={players}
-                    currentPlayer={player}
-                    shots={sumShots}
-                    handleSetPlayers={handleSetPlayers}
-                    playerName={playerName}
-                    handleSetPlayer={handleSetPlayer}
-                />
+                {gameStatus === "Running" && (
+                    <Shot
+                        isVisible={openModal}
+                        onClose={handleClose}
+                        finishPlayer={finishPlayer}
+                        playerMoment={playerMoment}
+                        players={players}
+                        gameId={gameId}
+                        currentPlayer={player}
+                        shots={sumShots}
+                        handleSetPlayers={handleSetPlayers}
+                        playerName={playerName}
+                        gameStatus={gameStatus}
+                        handleSetPlayer={handleSetPlayer}
+                    />
+                )}
             </View>
         </View>
     );

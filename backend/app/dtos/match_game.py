@@ -8,13 +8,13 @@ from app.dtos.session import SessionDTO
 
 class GameStatusDTO(Enum):
     idle = "Idle"
-    running = "Done"
+    running = "Running"
     done = "Done"
     failed = "Failed"
 
 
 class MatchGameDTO(DTO):
-    status: GameStatusDTO = Field(default=GameStatusDTO.idle)
+    status: GameStatusDTO = Field(default=GameStatusDTO.running)
     players_total: int = Field(default=5)
     champion: Optional[str] = Field(default=None)
     player_name: str

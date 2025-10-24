@@ -9,10 +9,10 @@ export default function Home() {
         try {
             setIsLoading(true);
             const data = await createGame({ player_name: "Lucas" });
-            console.log(data._id);
+            console.log(data?._id);
             router.push({
                 pathname: `/bangMatch`,
-                params: { game_id: data._id },
+                params: { game_id: data?._id },
             });
         } finally {
             setIsLoading(false);

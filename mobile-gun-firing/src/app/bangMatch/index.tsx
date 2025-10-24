@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { View, FlatList, StyleSheet } from "react-native";
-
+import { useLocalSearchParams } from "expo-router";
 import { create_players } from "@/src/game/init_game";
 import Dices from "@/src/components/dices";
 import { Player } from "@/src/dtos/players";
@@ -9,13 +9,14 @@ import CardPlayer from "@/src/components/cardPlayer";
 import ChampionModal from "@/src/components/alerts/champion";
 
 import { is_the_champion } from "@/src/consts/champion";
+import { GameStatus } from "@/src/dtos/game_match";
 
 // import CircularList from "./components/circularList";
 
 export default function BargMatch() {
-    const data = create_players();
-
-    const [players] = useState<Player[]>(data);
+    const { game_id } = useLocalSearchParams();
+    const players = create_players();
+    const [gameStatus, setGameStatus] = useState<GameStatus>("Running");
     const [livePlayers, setLivePlayers] = useState<Player[]>(players);
 
     function handleSetPlayers(players: Player[]) {
@@ -35,11 +36,7 @@ export default function BargMatch() {
     }
 
     const [openModal, setOpenModal] = useState(false);
-    console.log(
-        livePlayers.forEach((p) => {
-            console.log(p.user_name, p.bullet, p.is_alive);
-        })
-    );
+
     useEffect(() => {
         if (livePlayers.length) {
             setTeamChampion(is_the_champion(livePlayers));
@@ -48,6 +45,7 @@ export default function BargMatch() {
 
     useEffect(() => {
         if (teamChampion) {
+            setGameStatus("Done");
             setOpenModal(true);
         }
     }, [teamChampion]);
@@ -72,6 +70,8 @@ export default function BargMatch() {
                 setPlayerMoment={handlePlayerMoment}
                 playerMoment={playerMoment}
                 playerName={playerName}
+                gameId={String(game_id)}
+                gameStatus={gameStatus}
             />
             {teamChampion && (
                 <ChampionModal

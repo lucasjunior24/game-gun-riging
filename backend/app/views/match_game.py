@@ -7,7 +7,7 @@ from app.controllers.game import GameController
 
 from app.controllers.history import HistoryController
 from app.dtos.history import HistoryDTO
-from app.dtos.match_game import CreateGameDTO, MatchGameDTO
+from app.dtos.match_game import CreateGameDTO, GameStatusDTO, MatchGameDTO
 from app.dtos.response import (
     CreateProductDTO,
     ProductModelDTO,
@@ -56,15 +56,17 @@ async def new_match_game(
     return ResponseDTO(data=new_game, message="success")
 
 
-@match_game_router.put("", response_model=ResponseModelDTO[ProductModelDTO])
-async def update(
-    id: str,
-    product: CreateProductDTO,
+@match_game_router.put("/status", response_model=ResponseModelDTO[MatchGameDTO])
+async def update_status(
+    game_id: str,
 ):
+    game_controller = ApplicationManager.get(GameController)
+    old_game = game_controller.get_by_id(game_id)
+    old_game.status = GameStatusDTO.done
+    game = game_controller.update(old_game)
+    return ResponseDTO(data=game, message="success")
 
-    return ResponseDTO(data=product, message="success")
 
-
-@match_game_router.delete("", response_model=ResponseModelDTO[ProductModelDTO])
+@match_game_router.delete("", response_model=ResponseModelDTO[MatchGameDTO])
 async def delete(product_id: str):
     return ResponseDTO(data=[], message="success")
