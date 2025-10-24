@@ -1,45 +1,20 @@
-from typing import List
 from litellm import completion
-from pydantic import BaseModel, Field
 
-from app.dtos.dice import ListShotsDTO, ShotsDTO
+
+from app.dtos.dice import ListShotsDTO
 from app.util.config import GROQ_API_KEY
 
 
 def chat(user_message: str, messages: list | None = None):
-    print("Iniciando chat com o modelo. Digite 'sair' para encerrar.")
-    # message_initial = [
-    #     {
-    #         "role": "system",
-    #         "content": """
-    #         Você é um Jogador de alto nivel do jogo Bang dice game, vocé consegue Jogar como todas as indentidades do jogo, sendo ela Xerife, Assistente, Fora da lei e Renegado, sua pernalidade e visão de jogo muda de acordo com dua identidade
-    #         """,
-    #     }
-    # ]
-    # list_message = messages if messages else message_initial
-    list_message = messages
-
-    while True:
-        if user_message.lower() == "sair":
-            print("Encerrando chat. Até a próxima!")
-            break
-
-        # Adicionar a mensagem do usuário ao histórico
-        list_message.append({"role": "user", "content": user_message})
-        # Chamar a API com o histórico completo
-        model_response = call_groq_api(list_message)
-
-        list_message.append({"role": "assistant", "content": model_response})
-        # print("Assistent: ", model_response)
-        # Adicionar a resposta do modelo ao histórico
-
-        print()
-        return model_response
+    messages.append({"role": "user", "content": user_message})
+    # Chamar a API com o histórico completo
+    model_response = call_groq_api(messages)
+    return model_response
 
 
 def call_groq_api(messages, model="groq/llama-3.3-70b-versatile"):
     global tools
-    question = messages[len(messages) - 2 : len(messages)]
+    question = messages[len(messages) - 3 : len(messages)]
     messagess = messages[0 : len(messages) - 1]
     response = completion(
         model=model,

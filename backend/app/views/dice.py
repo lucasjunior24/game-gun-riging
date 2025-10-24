@@ -56,9 +56,9 @@ async def execution_dices(
             new_message=teste_message,
             table_situation=execution.table_situation,
             game_id=execution.game_id,
+            user_name=execution.current_player.user_name,
         )
-        shots_one = ListShotsDTO(**response_one)
-        for shot in shots_one.shots_list:
+        for shot in response_one.shots_list:
             shot_one = UserBulletsDTO(**shot.model_dump(mode="json"))
             execution.one_distance.user_bullets.append(shot_one)
 
@@ -73,9 +73,10 @@ async def execution_dices(
             new_message=message_two,
             table_situation=execution.table_situation,
             game_id=execution.game_id,
+            user_name=execution.current_player.user_name,
         )
-        shots_two = ListShotsDTO(**data)
-        for shot in shots_two.shots_list:
+
+        for shot in data.shots_list:
             shot_two = UserBulletsDTO(**shot.model_dump(mode="json"))
             execution.two_distance.user_bullets.append(shot_two)
 

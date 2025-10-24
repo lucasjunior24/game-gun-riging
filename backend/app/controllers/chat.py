@@ -4,7 +4,7 @@ from app.controllers.history import HistoryController
 from app.db.models.chat import ChatDTO
 from app.db.models.message import MessageDTO
 from app.dtos.character import IdentityDTO
-from app.dtos.dice import DiceShowDTO, ExecuteDistanceDTO
+from app.dtos.dice import DiceShowDTO, ExecuteDistanceDTO, ListShotsDTO
 from app.dtos.history import HistoryDTO
 from app.modelo.chat_bot import chat
 import json
@@ -19,9 +19,10 @@ class ChatController(BaseController[ChatDTO]):
     def add_message(
         self,
         new_message: str,
+        user_name: str,
         table_situation: str | None = None,
         game_id: str | None = None,
-    ):
+    ) -> ListShotsDTO:
         history_controller = ApplicationManager.get(HistoryController)
         history_dto = None
         if game_id:
@@ -56,12 +57,19 @@ class ChatController(BaseController[ChatDTO]):
         response_chat = chat(new_message, messages)
         python_dict = json.loads(response_chat)
         # return python_dict
-        chat_user = MessageDTO(message=new_message, author="user")
-        chat_agent = MessageDTO(message=response_chat, author="agent")
         # history_dto.messages.append(chat_agent)
+        shots = ListShotsDTO(**python_dict)
+        shots_message = f"O Jogador {user_name} deu"
+        for shot in shots.shots_list:
+            if shot.shots == 1:
+                shots_message += f" {shot.shots} tiro no Jogador {shot.user_name}."
+            else:
+                shots_message += f" {shot.shots} tiros no Jogador {shot.user_name}."
 
+        message_agent = MessageDTO(message=shots_message, author="agent")
+        history_dto.messages.append(message_agent)
         data = history_controller.update(history_dto)
-        return python_dict
+        return shots
 
     def formart_to_execure_dices(
         self,

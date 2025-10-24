@@ -1,5 +1,5 @@
 import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
-import { PropsWithChildren } from "react";
+import { PropsWithChildren, useMemo } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { ButtonBase } from "../../buttonBase";
@@ -16,6 +16,18 @@ export default function ChampionModal({
     onClose,
     teamChampion,
 }: ShootProps) {
+    const message = useMemo(() => {
+        switch (teamChampion) {
+            case "Xerife":
+                return "Parabéns o time do Xerife venceu!";
+
+            case "Renegado":
+                return "Parabéns o Renegado venceu!";
+
+            default:
+                return "Parabéns os Foras da lei venceram!";
+        }
+    }, [teamChampion]);
     return (
         <View>
             <Modal
@@ -27,9 +39,7 @@ export default function ChampionModal({
                 <View style={styles.modalContent}>
                     <View style={styles.titleContainer}>
                         <Text />
-                        <Text style={styles.title}>
-                            Parabens os {teamChampion} venceram
-                        </Text>
+                        <Text style={styles.title}>{message}</Text>
                         <Pressable onPress={onClose}>
                             <MaterialIcons
                                 name="close"
