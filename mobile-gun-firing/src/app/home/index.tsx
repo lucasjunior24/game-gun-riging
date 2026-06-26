@@ -1,12 +1,13 @@
 import { createGame } from "@/src/api/match_game";
-import { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
 import { useRouter } from "expo-router";
+import { useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 export default function Home() {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
     async function handleCreateGame() {
         try {
+            console.log("handle Create Game");
             setIsLoading(true);
             const data = await createGame({ player_name: "Lucas" });
             console.log(data?._id);

@@ -13,3 +13,5 @@ efipay==1.0.3
 
 litellm
 basic-components-fpp==0.0.1
+uvicorn
+numpy

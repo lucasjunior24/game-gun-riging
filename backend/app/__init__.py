@@ -21,11 +21,11 @@ async def get_token_header(x_token: Annotated[str, Header()]):
         raise HTTPException(status_code=400, detail="X-Token header invalid")
 
 
-origins = [
-    "http://localhost",
-    "http://localhost:5173",
-]
-
+# origins = [
+#     "http://localhost",
+#     "http://localhost:5173",
+# ]
+origins = ["*"]
 
 # app = FastAPI(dependencies=[Depends(get_query_token)])
 
