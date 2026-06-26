@@ -1,5 +1,5 @@
 
-
+### Mobile game BANG: DICE GAME
 API → recebe estado do jogo
 Agente → decide ação
 Simulador → permite treino / testes locais
@@ -7,7 +7,7 @@ Simulador → permite treino / testes locais
 bang-ai/
 │
 ├── app/
-│   ├── main.py              # FastAPI entrypoint
+│   ├── main.py             # FastAPI entrypoint
 │   ├── schemas.py          # Models (Pydantic)
 │   ├── agent.py            # Lógica do agente
 │   ├── env.py              # Simulador simplificado

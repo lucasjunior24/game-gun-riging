@@ -2,7 +2,7 @@ import random
 
 from ai.schemas import GameState, Player, Player
 
-from ai.schemas import GameState
+from ai.utils import build_attack_matrix, predict_incoming_damage
 
 
 class HeuristicPolicy:
@@ -67,54 +67,54 @@ class HeuristicPolicy:
         return "passar"
 
     # 🎯 Escolha de alvo (papel importa MUITO)
-    def choose_target(self, state):
+    def choose_target(self, state: GameState):
+        attacks = build_attack_matrix(state.history)
+        incoming = predict_incoming_damage(state)
 
         candidatos = [p for p in state.players if p.distancia <= 2 and p.vida > 0]
 
-        if not candidatos:
-            return None
-
-        scored = [(p, self.score_target(state, p)) for p in candidatos]
+        scored = [
+            (p, self.score_target(state, p, attacks, incoming)) for p in candidatos
+        ]
 
         scored.sort(key=lambda x: x[1], reverse=True)
 
-        return scored[0][0].id
+        return scored[0][0].id if scored else None
 
     def target_sheriff(self, state: GameState):
         # Simplificação: assume player 0 é xerife
         return 0
 
-    def score_target(self, state: GameState, player: Player):
+    def score_target(
+        self,
+        state: GameState,
+        player: Player,
+        attacks: dict[int, dict[int, int]],
+        incoming: dict[int, int],
+    ):
 
         score = 0
 
-        # 🎭 Baseado no papel
+        # 🎭 Papel
         if state.papel == "fora_da_lei":
             if player.papel_estimado == "xerife":
                 score += 10
-            score += player.suspeita * 5
 
-        elif state.papel == "xerife":
+        if state.papel == "xerife":
             if player.papel_estimado == "fora_da_lei":
                 score += 8
-            score += player.suspeita * 4
 
-        elif state.papel == "renegado":
-            # Quer equilibrar o jogo
-            if player.papel_estimado == "xerife":
-                score += 3
-            else:
-                score += 5
+        # 🔥 HISTÓRICO DE AGRESSÃO (ESSENCIAL)
+        score += attacks[player.id][state.self_id] * 5  # vingança
 
-        elif state.papel == "vice":
-            if player.papel_estimado == "fora_da_lei":
-                score += 9
+        # 🧠 Se ele está sendo atacado por muitos → pode morrer sozinho
+        score -= incoming[player.id] * 2
 
-        # ❤️ Finalizar inimigo (muito importante)
+        # 🎯 Finalizar alvo
         if player.vida == 1:
             score += 6
 
-        # 📏 Distância (mais perto = melhor)
+        # 📏 Distância
         score += 3 - player.distancia
 
         return score

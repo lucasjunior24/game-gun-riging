@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from ai.schemas import GameState, ActionResponse
+from ai.schemas import GameState
 from ai.agent import BangAgent
 
 app = FastAPI()
