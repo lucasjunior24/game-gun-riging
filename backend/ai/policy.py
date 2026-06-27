@@ -68,18 +68,19 @@ class HeuristicPolicy:
 
     # 🎯 Escolha de alvo (papel importa MUITO)
     def choose_target(self, state: GameState):
-        attacks = build_attack_matrix(state.history)
-        incoming = predict_incoming_damage(state)
+        incoming = {p.id: 0 for p in state.players}
+
+        # 🔮 previsão com ML
+        for p in state.players:
+            if p.id == state.self_id:
+                continue
+
+            probs = self.opponent_model.predict_targets(state, p.id)
+
+            for target_id, prob in probs.items():
+                incoming[target_id] += prob
 
         candidatos = [p for p in state.players if p.distancia <= 2 and p.vida > 0]
-
-        scored = [
-            (p, self.score_target(state, p, attacks, incoming)) for p in candidatos
-        ]
-
-        scored.sort(key=lambda x: x[1], reverse=True)
-
-        return scored[0][0].id if scored else None
 
     def target_sheriff(self, state: GameState):
         # Simplificação: assume player 0 é xerife
