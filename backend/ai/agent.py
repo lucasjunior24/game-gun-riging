@@ -1,34 +1,32 @@
-from ai.policy import HeuristicPolicy
-from ai.schemas import GameState
+from typing import List
+
+from ai.types import GameState
+from ai.sequence_model import SequenceModel
+from ai.behavior_model import BehaviorModel
+from ai.predictor import Predictor
+from ai.policy import AdvancedPolicy
 
 
 class BangAgent:
 
-    def __init__(self):
-        self.policy = HeuristicPolicy()
+    def __init__(self, input_size: int, num_players: int) -> None:
 
-    def decide(self, state: GameState):
+        self.seq_model = SequenceModel(input_size)
+        self.behavior_model = BehaviorModel(64, num_players)
 
-        # 🎭 Ajustes por personagem antes da decisão
-        state = self.apply_character_ability(state)
+        self.predictor = Predictor(self.seq_model, self.behavior_model)
+        self.policy = AdvancedPolicy(self.predictor)
 
-        return self.policy.choose_action(state)
+        self.history_states: List[GameState] = []
 
-    def apply_character_ability(self, state: GameState) -> GameState:
+    def update_history(self, state: GameState) -> None:
+        self.history_states.append(state)
 
-        # 🎭 Exemplos reais do jogo:
+        if len(self.history_states) > 10:
+            self.history_states.pop(0)
 
-        if state.personagem == "Luke":
-            # Luke pode rerollar um dado extra
-            state.rerolls_restantes = min(3, state.rerolls_restantes + 1)
+    def decide(self, state: GameState) -> str:
 
-        if state.personagem == "Jack":
-            # Jack pode ignorar dinamite (simulação simples)
-            state.dados = ["normal" if d == "dynamite" else d for d in state.dados]
+        self.update_history(state)
 
-        if state.personagem == "Suzy":
-            # Se não tiver tiros → ganha reroll agressivo
-            if "tiro" not in state.dados:
-                state.rerolls_restantes += 1
-
-        return state
+        return self.policy.decide(state, self.history_states)

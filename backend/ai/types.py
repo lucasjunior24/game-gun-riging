@@ -1,7 +1,6 @@
-from typing import List, TypedDict, Literal
+from typing import List, Literal, TypedDict
 
 Role = Literal["xerife", "fora_da_lei", "renegado", "vice"]
-Dice = Literal["tiro", "cerveja", "dynamite", "flecha", "gatling"]
 ActionType = Literal["tiro", "gatling", "cerveja"]
 
 
@@ -10,7 +9,7 @@ class PlayerState(TypedDict):
     vida: int
     distancia: int
     suspeita: float
-    papel_estimado: Role
+    papel_prob: dict[Role, float]  # 🔥 Bayes
 
 
 class Event(TypedDict):
@@ -26,7 +25,7 @@ class GameState(TypedDict):
     papel: Role
     personagem: str
 
-    dados: List[Dice]
+    dados: List[str]
     rerolls_restantes: int
 
     players: List[PlayerState]
