@@ -15,7 +15,7 @@ from app.dtos.response import (
     ResponseDTO,
     ResponseModelDTO,
 )
-
+from app.services.policy_service import ShotPolicyService
 
 dices_router = APIRouter(
     prefix="/dices",
@@ -43,6 +43,10 @@ async def execution_dices(
     execution: ExecuteDicesDTO,
 ):
     chat_controller = ChatController()
+
+    shot_policy_service = ShotPolicyService()
+    prediction = shot_policy_service.predict(execution)
+    execution_result = shot_policy_service.apply_prediction(execution, prediction)
 
     if execution.one_distance.bullet_total:
         teste_message = chat_controller.exec_bullets_chat(
