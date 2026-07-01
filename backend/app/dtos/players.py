@@ -18,7 +18,7 @@ class PlayerDTO(BaseDTO):
     is_bot: bool = Field(default=True)
     arrow: int = Field(default=0)
     bullet: int = Field(default=0)
-
+    papel_probability: float = Field(default=0.0)
     character: Optional[CharacterDTO] = Field(default=None)
     # identity: Identity
 

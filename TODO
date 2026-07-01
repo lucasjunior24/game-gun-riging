@@ -1,0 +1,17 @@
+# TODO
+
+## Prioridade alta
+- [ ] Implementar sistema de crenca sobre identidade dos jogadores + decisao de tiro baseada nessa crenca.
+  - Usar o enum `IdentityDTO` de `backend/app/dtos/character.py` para representar identidades dos jogadores.
+  - Considerar as identidades `XERIFE`, `FORA_DA_LEI`, `RENEGADO` e `ASSISTENTE`.
+  - Usar sempre o termo "Assistente" para esse papel.
+  - Evoluir `papel_probability` para representar suspeita/probabilidade por identidade.
+  - Atualizar a decisao de tiro para considerar identidade provavel, vida, flechas, distancia e papel do jogador atual.
+
+  
+## Proximas features de IA
+- [ ] Adicionar historico de acoes da partida para alimentar as suspeitas de identidade.
+- [ ] Retornar explicacao e confianca da decisao do bot.
+- [ ] Planejar IA para decidir reroll dos dados.
+- [ ] Planejar niveis de dificuldade para bots.
+- [ ] Planejar modo debug para visualizar suspeitas por jogador.
