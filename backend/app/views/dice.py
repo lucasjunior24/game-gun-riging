@@ -48,43 +48,10 @@ async def execution_dices(
     prediction = shot_policy_service.predict(execution)
     execution_result = shot_policy_service.apply_prediction(execution, prediction)
 
-    if execution.one_distance.bullet_total:
-        teste_message = chat_controller.exec_bullets_chat(
-            execution.one_distance,
-            execution.current_identity,
-            execution.current_player.user_name,
-            "1",
-        )
+    return ResponseDTO(data=execution_result, message="success")
 
-        response_one = chat_controller.add_message(
-            new_message=teste_message,
-            table_situation=execution.table_situation,
-            game_id=execution.game_id,
-            user_name=execution.current_player.user_name,
-        )
-        for shot in response_one.shots_list:
-            shot_one = UserBulletsDTO(**shot.model_dump(mode="json"))
-            execution.one_distance.user_bullets.append(shot_one)
 
-    if execution.two_distance:
-        message_two = chat_controller.exec_bullets_chat(
-            execution.two_distance,
-            execution.current_identity,
-            execution.current_player.user_name,
-            "2",
-        )
-        data = chat_controller.add_message(
-            new_message=message_two,
-            table_situation=execution.table_situation,
-            game_id=execution.game_id,
-            user_name=execution.current_player.user_name,
-        )
 
-        for shot in data.shots_list:
-            shot_two = UserBulletsDTO(**shot.model_dump(mode="json"))
-            execution.two_distance.user_bullets.append(shot_two)
-
-    return ResponseDTO(data=execution)
 
 
 # def exec_bullets(

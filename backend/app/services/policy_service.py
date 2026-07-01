@@ -3,7 +3,7 @@ import torch
 
 from app.dtos.dice import ExecuteDicesDTO, ExecuteDistanceDTO, UserBulletsDTO
 from app.dtos.players import PlayerDTO
-from app.dtos import ShotPolicyDecisionDTO, ShotPolicyPredictionDTO
+from app.dtos.policy import ShotPolicyDecisionDTO, ShotPolicyPredictionDTO
 
 
 class ShotPolicyTargetNet(torch.nn.Module):
