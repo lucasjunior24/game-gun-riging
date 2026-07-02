@@ -60,11 +60,7 @@ class ShotPolicyService:
     def predict(self, execution: ExecuteDicesDTO) -> ShotPolicyPredictionDTO:
         decisions = []
         for distance_label in ("1", "2"):
-            distance = (
-                execution.one_distance
-                if distance_label == "1"
-                else execution.two_distance
-            )
+            distance = self.get_execution_distance(execution, distance_label)
             if (
                 not distance
                 or distance.bullet_total <= 0
@@ -94,15 +90,20 @@ class ShotPolicyService:
 
         return ShotPolicyPredictionDTO(decisions=decisions)
 
+    def get_execution_distance(
+        self, execution: ExecuteDicesDTO, distance_label: str
+    ) -> ExecuteDistanceDTO | None:
+        distance = (
+            execution.one_distance if distance_label == "1" else execution.two_distance
+        )
+
+        return distance
+
     def apply_prediction(
         self, execution: ExecuteDicesDTO, prediction: ShotPolicyPredictionDTO
     ) -> ExecuteDicesDTO:
         for decision in prediction.decisions:
-            distance = (
-                execution.one_distance
-                if decision.distance == "1"
-                else execution.two_distance
-            )
+            distance = self.get_distance(execution, decision.distance)
             if distance is None:
                 continue
             distance.user_bullets.append(
@@ -112,7 +113,12 @@ class ShotPolicyService:
             )
         return execution
 
-    def _build_feature_vector(self, execution, distance, target_player):
+    def _build_feature_vector(
+        self,
+        execution: ExecuteDicesDTO,
+        distance: ExecuteDistanceDTO,
+        target_player,
+    ):
         features = [
             float(distance.bullet_total),
             float(len(distance.players_options)),
@@ -135,7 +141,7 @@ class ShotPolicyService:
             features, dtype=torch.float32, device=self.device
         ).unsqueeze(0)
 
-    def _predict_target(self, execution, distance):
+    def _predict_target(self, execution: ExecuteDicesDTO, distance: ExecuteDistanceDTO):
         scores = []
         for candidate in distance.players_options:
             features = self._build_feature_vector(execution, distance, candidate)
@@ -144,14 +150,24 @@ class ShotPolicyService:
             scores.append((score, candidate))
         return max(scores, key=lambda item: item[0])[1]
 
-    def _predict_shots(self, execution, distance, target_player):
+    def _predict_shots(
+        self,
+        execution: ExecuteDicesDTO,
+        distance: ExecuteDistanceDTO,
+        target_player,
+    ) -> int:
         features = self._build_feature_vector(execution, distance, target_player)
         with torch.no_grad():
             logits = self.shot_model(features)
             shot_index = int(logits.argmax(dim=1).item()) + 1
         return min(3, max(1, shot_index))
 
-    def _predict_confidence(self, execution, distance, target_player):
+    def _predict_confidence(
+        self,
+        execution: ExecuteDicesDTO,
+        distance: ExecuteDistanceDTO,
+        target_player,
+    ):
         features = self._build_feature_vector(execution, distance, target_player)
         with torch.no_grad():
             score = torch.sigmoid(self.target_model(features)).item()

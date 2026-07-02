@@ -42,28 +42,8 @@ async def valide_dices(
 async def execution_dices(
     execution: ExecuteDicesDTO,
 ):
-    chat_controller = ChatController()
-
     shot_policy_service = ShotPolicyService()
     prediction = shot_policy_service.predict(execution)
     execution_result = shot_policy_service.apply_prediction(execution, prediction)
 
     return ResponseDTO(data=execution_result, message="success")
-
-
-
-
-
-# def exec_bullets(
-#     execution: ExecuteDistanceDTO, personagem: str, user_name: str
-# ) -> ExecuteDistanceDTO:
-
-#     for bullet in range(0, execution.bullet_total):
-#         player = execution.players_options[0]
-#         if execution.user_bullets:
-#             execution.user_bullets[0].shoots += 1
-#         else:
-#             user = UserBulletsDTO(user_name=player.user_name, shoots=1)
-#             execution.user_bullets.append(user)
-
-#     return execution
