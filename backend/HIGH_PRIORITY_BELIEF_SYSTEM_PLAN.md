@@ -2,9 +2,13 @@
 
 Este documento descreve como eu implementaria a feature de Prioridade alta do `TODO`:
 
+Status: primeira versao implementada no fluxo principal do backend.
+
 > Implementar sistema de crenca sobre identidade dos jogadores + decisao de tiro baseada nessa crenca.
 
 O objetivo e fazer o bot parar de escolher alvo apenas por features simples, como posicao ou score neural generico, e passar a considerar a identidade provavel de cada jogador dentro da partida.
+
+Uma regra importante do jogo: a identidade do `XERIFE` sempre esta revelada. Portanto, o sistema nao deve tentar adivinhar quem e o Xerife. Quando um jogador for o Xerife, a crenca dele deve ser tratada como certeza.
 
 ## Resultado esperado
 
@@ -15,6 +19,8 @@ Ao final da feature, cada jogador deve ter uma distribuicao de probabilidade por
 - `RENEGADO`
 - `ASSISTENTE`
 
+Todas as validacoes, comparacoes e normalizacoes de identidade devem usar o enum `IdentityDTO`, definido em `app/dtos/character.py`. O codigo nao deve depender de strings soltas como `"xerife"`, `"vice"` ou `"fora_da_lei"`.
+
 Essa distribuicao deve influenciar a decisao de tiro considerando:
 
 - identidade provavel do alvo;
@@ -24,7 +30,7 @@ Essa distribuicao deve influenciar a decisao de tiro considerando:
 - distancia;
 - quantidade de tiros disponiveis.
 
-O termo usado para o papel de aliado do Xerife deve ser sempre `Assistente`.
+O termo usado para o papel de aliado do Xerife deve ser sempre `Assistente`, usando `IdentityDTO.ASSISTENTE`.
 
 ## Decisao de arquitetura
 
@@ -52,16 +58,10 @@ papel_probability: float = Field(default=0.0)
 
 Esse campo representa apenas um numero solto. Para a nova feature, ele precisa virar uma distribuicao por identidade.
 
-Eu substituiria ou evoluiria esse campo para algo como:
+Na implementacao, `papel_probability` deve ser um DTO Pydantic tipado, nao um dicionario solto. O payload externo ainda pode chegar em formato de objeto JSON, mas o backend deve converter isso para uma classe:
 
 ```python
-papel_probability: dict[IdentityDTO, float]
-```
-
-Na pratica, por compatibilidade com JSON/Pydantic, pode ser melhor usar chaves string com os valores do enum:
-
-```python
-papel_probability: dict[str, float] = Field(default_factory=dict)
+papel_probability: IdentityProbabilityDTO = Field(default_factory=IdentityProbabilityDTO)
 ```
 
 As chaves esperadas seriam:
@@ -79,6 +79,12 @@ Esses valores devem vir do enum `IdentityDTO`, definido em:
 app/dtos/character.py
 ```
 
+Regra especifica do Xerife:
+
+- se o jogador for identificado como `IdentityDTO.XERIFE`, a distribuicao deve ser `{XERIFE: 1.0, FORA_DA_LEI: 0.0, RENEGADO: 0.0, ASSISTENTE: 0.0}`;
+- se o jogador nao for o Xerife, a crenca inicial nao deve atribuir probabilidade ao Xerife quando o Xerife revelado ja for conhecido na mesa;
+- nenhuma validacao deve comparar identidade com string literal; sempre usar `IdentityDTO.XERIFE`, `IdentityDTO.FORA_DA_LEI`, `IdentityDTO.RENEGADO` e `IdentityDTO.ASSISTENTE`.
+
 ## Passo 2: criar um servico de crenca
 
 Eu criaria um novo arquivo:
@@ -92,25 +98,37 @@ Responsabilidade desse servico:
 - inicializar probabilidades quando o jogador ainda nao tiver `papel_probability`;
 - normalizar probabilidades para a soma fechar em `1.0`;
 - obter a identidade mais provavel de um jogador;
+- reconhecer o Xerife revelado como identidade certa;
+- validar chaves de identidade usando `IdentityDTO`;
 - expor helpers simples para o `ShotPolicyService`.
 
 Funcoes principais:
 
 ```python
 class BeliefService:
-    def initialize_player_belief(player: PlayerDTO) -> dict[str, float]
-    def normalize(probabilities: dict[str, float]) -> dict[str, float]
+    def initialize_player_belief(player: PlayerDTO, sheriff_user_name: str | None = None) -> IdentityProbabilityDTO
+    def normalize(probabilities: IdentityProbabilityDTO) -> IdentityProbabilityDTO
+    def coerce_identity(value: IdentityDTO | str) -> IdentityDTO
     def get_identity_probability(player: PlayerDTO, identity: IdentityDTO) -> float
     def get_most_likely_identity(player: PlayerDTO) -> IdentityDTO
 ```
 
-Neste primeiro passo, sem historico de acoes, a crenca pode ser inicializada de forma neutra:
+Neste primeiro passo, sem historico de acoes, a crenca pode ser inicializada de forma neutra apenas entre as identidades ocultas quando o jogador nao for o Xerife:
 
 ```text
-Xerife: 0.25
-Fora da lei: 0.25
-Renegado: 0.25
-Assistente: 0.25
+Xerife: 0.00
+Fora da lei: 0.34
+Renegado: 0.33
+Assistente: 0.33
+```
+
+Para o Xerife revelado, a crenca deve ser deterministica:
+
+```text
+Xerife: 1.00
+Fora da lei: 0.00
+Renegado: 0.00
+Assistente: 0.00
 ```
 
 Depois, quando a feature de historico de acoes for implementada, esse mesmo servico pode atualizar as suspeitas com base em eventos.
@@ -145,6 +163,12 @@ Em numeros, isso poderia virar:
 
 Esses pesos nao precisam ser perfeitos no inicio. Eles servem como heuristica clara e ajustavel.
 
+Na implementacao, as regras dessa matriz devem ser indexadas por `IdentityDTO`. Isso pode ser feito por uma classe de prioridade ou por metodos tipados que recebem `IdentityDTO` como entrada.
+
+```python
+def get_target_weight(current_identity: IdentityDTO, target_identity: IdentityDTO) -> float
+```
+
 ## Passo 4: calcular score de alvo baseado em crenca
 
 Eu adicionaria ao `ShotPolicyService` um caminho de score heuristico por identidade.
@@ -153,11 +177,13 @@ Para cada candidato em `players_options`, calcular:
 
 ```text
 identity_score =
-    prob(Xerife) * peso_contra_Xerife
-  + prob(Fora da lei) * peso_contra_Fora_da_lei
-  + prob(Renegado) * peso_contra_Renegado
-  + prob(Assistente) * peso_contra_Assistente
+    prob(IdentityDTO.XERIFE) * peso_contra_Xerife
+  + prob(IdentityDTO.FORA_DA_LEI) * peso_contra_Fora_da_lei
+  + prob(IdentityDTO.RENEGADO) * peso_contra_Renegado
+  + prob(IdentityDTO.ASSISTENTE) * peso_contra_Assistente
 ```
+
+Para o Xerife revelado, esse calculo continua funcionando, mas com `prob(IdentityDTO.XERIFE) = 1.0`. Isso deixa a decisao simples: o bot nao infere a identidade do Xerife, apenas usa o fato conhecido.
 
 Depois somar ajustes de estado:
 
@@ -251,6 +277,8 @@ current_is_Assistente
 
 O vetor passaria de 12 para 19 ou 20 features, dependendo se mantivermos a feature antiga `current_identity == "xerife"`.
 
+Essas features devem ser derivadas por comparacao com `IdentityDTO`, nao por `.lower()` nem por string literal. A feature `prob_Xerife` deve ser `1.0` apenas para o Xerife revelado e `0.0` para os demais jogadores quando a mesa ja conhece quem e o Xerife.
+
 Como isso muda `input_size`, sera necessario retreinar e salvar novamente:
 
 ```text
@@ -271,10 +299,19 @@ Exemplo de distribuicao:
 
 ```text
 Player suspeito de Fora da lei:
-Xerife: 0.05
+Xerife: 0.00
 Fora da lei: 0.70
-Renegado: 0.15
-Assistente: 0.10
+Renegado: 0.18
+Assistente: 0.12
+```
+
+Para o jogador Xerife revelado:
+
+```text
+Xerife: 1.00
+Fora da lei: 0.00
+Renegado: 0.00
+Assistente: 0.00
 ```
 
 Tambem precisa mudar a escolha do alvo sintetico. Em vez de escolher apenas por:
@@ -315,8 +352,11 @@ tests/services/test_shot_policy_service.py
 Cenarios importantes:
 
 - inicializa crenca neutra quando `papel_probability` esta vazio;
+- inicializa o Xerife revelado com `IdentityDTO.XERIFE = 1.0`;
+- nao tenta atribuir probabilidade de Xerife para jogadores ocultos quando o Xerife ja e conhecido;
 - normaliza probabilidades corretamente;
-- usa sempre `Assistente`, nunca `vice`;
+- usa sempre `IdentityDTO.ASSISTENTE`, nunca `vice`;
+- valida identidades usando `IdentityDTO`;
 - Xerife prioriza alvo com alta chance de `Fora da lei`;
 - Fora da lei prioriza alvo com alta chance de `Xerife`;
 - alvo morto nao deve ser escolhido;
@@ -362,6 +402,8 @@ Essa primeira versao teria:
 
 - `BeliefService`;
 - `papel_probability` por identidade;
+- Xerife revelado tratado como identidade certa;
+- validacao centralizada com `IdentityDTO`;
 - score heuristico de alvo;
 - fallback inteligente baseado em crenca;
 - combinacao entre score neural e score de crenca quando o modelo existir;

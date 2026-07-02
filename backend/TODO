@@ -1,7 +1,7 @@
 # TODO
 
 ## Prioridade alta
-- [ ] Implementar sistema de crenca sobre identidade dos jogadores + decisao de tiro baseada nessa crenca.
+- [x] Implementar sistema de crenca sobre identidade dos jogadores + decisao de tiro baseada nessa crenca.
   - Usar o enum `IdentityDTO` de `backend/app/dtos/character.py` para representar identidades dos jogadores.
   - Considerar as identidades `XERIFE`, `FORA_DA_LEI`, `RENEGADO` e `ASSISTENTE`.
   - Usar sempre a tipagem do Pydantic com classes e metodos tipados e sem usar dicionarios.

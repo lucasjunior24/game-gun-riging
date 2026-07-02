@@ -15,6 +15,8 @@ Ele recebe um `ExecuteDicesDTO`, analisa as opcoes de jogadores em cada distanci
 
 Depois disso, a predicao pode ser aplicada no proprio objeto de execucao, preenchendo a lista `user_bullets` de cada distancia.
 
+O alvo agora tambem considera crenca por identidade. A identidade do `XERIFE` e tratada como revelada: se um jogador e reconhecido como Xerife, sua probabilidade de `IdentityDTO.XERIFE` e `1.0`, sem tentativa de inferencia.
+
 ## Onde o modulo e usado
 
 O fluxo principal acontece no endpoint `PUT /dices/execution`, em `app/views/dice.py`.
@@ -52,6 +54,15 @@ Cada distancia usa `ExecuteDistanceDTO`:
 - `players_options`: jogadores que podem receber tiros naquela distancia.
 - `user_bullets`: lista preenchida com o resultado final da decisao.
 
+Cada `PlayerDTO` possui `papel_probability`, que usa um DTO tipado para representar probabilidades por identidade:
+
+- `xerife`;
+- `fora_da_lei`;
+- `renegado`;
+- `assistente`.
+
+As validacoes de identidade usam o enum `IdentityDTO`, definido em `app/dtos/character.py`.
+
 ## Saida da predicao
 
 O metodo `predict()` retorna um `ShotPolicyPredictionDTO`, definido em `app/dtos/policy.py`.
@@ -85,6 +96,24 @@ A distancia e ignorada quando:
 - nao existem jogadores em `players_options`.
 
 Se a distancia for valida, o servico decide o alvo, a quantidade de tiros e a confianca.
+
+Para escolher o alvo, o servico calcula um score de crenca por candidato. Esse score considera:
+
+- probabilidade do candidato ser `XERIFE`, `FORA_DA_LEI`, `RENEGADO` ou `ASSISTENTE`;
+- papel do jogador atual;
+- se o candidato esta vivo;
+- se o candidato e o proprio jogador atual;
+- flechas;
+- distancia;
+- quantidade de tiros disponiveis.
+
+Quando o modelo neural esta carregado, o score final combina:
+
+```text
+score_final = score_neural * 0.35 + score_crenca * 0.65
+```
+
+Quando o modelo nao esta carregado, o servico usa somente o score de crenca.
 
 ## Carregamento do modelo
 
@@ -131,7 +160,7 @@ O score passa por `sigmoid`:
 score = torch.sigmoid(self.target_model(features)).item()
 ```
 
-O jogador com maior score e escolhido como alvo:
+Esse score neural e combinado com o score de crenca. O jogador com maior score final e escolhido como alvo:
 
 ```python
 return max(scores, key=lambda item: item[0])[1]
@@ -177,7 +206,7 @@ O vetor atual tem 12 posicoes:
 | 6 | `target_player.is_bot` | `1.0` se o candidato e bot, senao `0.0` |
 | 7 | `execution.current_player.bullet` | Balas do jogador atual |
 | 8 | `execution.current_player.arrow` | Flechas do jogador atual |
-| 9 | `execution.current_identity == "xerife"` | `1.0` se o jogador atual e xerife |
+| 9 | `execution.current_identity == IdentityDTO.XERIFE` | `1.0` se o jogador atual e xerife |
 | 10 | `current_player == target_player` | `1.0` se o candidato e o proprio jogador atual |
 | 11 | `distance.bullet_total > 1` | `1.0` se ha mais de um tiro disponivel |
 
@@ -189,26 +218,28 @@ torch.tensor(features, dtype=torch.float32, device=self.device).unsqueeze(0)
 
 ## Calculo da confianca
 
-A confianca usa novamente o modelo de alvo.
+A confianca usa o score do alvo escolhido.
 
-O servico calcula o score do alvo escolhido, passa por `sigmoid` e limita o valor entre `0.3` e `0.95`.
+Quando o modelo neural esta disponivel, o servico combina o score neural e o score de crenca. Quando o modelo nao esta disponivel, usa apenas a crenca. O resultado e limitado entre `0.3` e `0.95`.
 
 ```python
-score = torch.sigmoid(self.target_model(features)).item()
-return round(float(max(0.3, min(0.95, score))), 2)
+confidence = score_neural * 0.35 + score_crenca * 0.65
+return round(float(max(0.3, min(0.95, confidence))), 2)
 ```
 
 Isso evita confiancas muito baixas ou artificialmente perfeitas.
 
 ## Fallback sem modelo treinado
 
-Se o arquivo `app/models/shot_policy_model.pt` nao existir, ou se os modelos nao forem carregados, o servico usa uma heuristica simples.
+Se o arquivo `app/models/shot_policy_model.pt` nao existir, ou se os modelos nao forem carregados, o servico usa a politica de crenca.
 
 Nesse caso:
 
-- o alvo escolhido e o jogador com maior `position`;
-- a quantidade de tiros e `min(3, distance.bullet_total)`;
-- a confianca fixa e `0.6`.
+- o alvo escolhido e o candidato com maior score de crenca;
+- jogadores mortos recebem penalidade forte;
+- o proprio jogador recebe penalidade forte;
+- a quantidade de tiros respeita `bullet_total` e e limitada entre `1` e `3`;
+- a confianca vem do score de crenca, limitada entre `0.3` e `0.95`.
 
 Esse fallback permite que o endpoint continue funcionando mesmo sem modelo treinado.
 
@@ -290,18 +321,6 @@ ShotPolicyService.apply_prediction()
 ExecuteDicesDTO com user_bullets preenchido
 ```
 
-## Ponto de atencao no codigo atual
+## Correcao aplicada
 
-No arquivo `app/services/policy_service.py`, o metodo `apply_prediction()` chama:
-
-```python
-distance = self.get_distance(execution, decision.distance)
-```
-
-Mas o metodo existente no servico se chama:
-
-```python
-get_execution_distance()
-```
-
-Portanto, do jeito que esta escrito, `apply_prediction()` tende a gerar erro de atributo em tempo de execucao. O ajuste esperado seria trocar a chamada para `get_execution_distance(execution, decision.distance)` ou criar um metodo `get_distance()` equivalente.
+O metodo `apply_prediction()` usa `get_execution_distance()` para localizar a distancia correta antes de preencher `user_bullets`.
