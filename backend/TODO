@@ -10,7 +10,7 @@
 
   
 ## Proximas features de IA
-- [ ] Adicionar historico de acoes da partida para alimentar as suspeitas de identidade.
+- [x] Adicionar historico de acoes da partida para alimentar as suspeitas de identidade.
 - [ ] Retornar explicacao e confianca da decisao do bot.
 - [ ] Planejar IA para decidir reroll dos dados.
 - [ ] Planejar niveis de dificuldade para bots.

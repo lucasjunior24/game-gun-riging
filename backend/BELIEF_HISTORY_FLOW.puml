@@ -1,0 +1,119 @@
+@startuml
+title Fluxo: historico de acoes atualizando crenca por identidade
+
+skinparam monochrome true
+skinparam shadowing false
+skinparam activity {
+  BorderColor Black
+  BackgroundColor White
+  DiamondBackgroundColor White
+}
+
+start
+
+:Jogador executa uma acao;
+
+if (A acao afeta outro jogador?) then (sim)
+  :Criar GameActionHistoryDTO;
+
+  note right
+    Campos sugeridos para salvar no historico:
+
+    - game_id
+    - round_number
+    - turn_number
+    - actor_user_name
+    - actor_identity se revelada
+    - action_type
+    - target_user_name
+    - target_identity se revelada
+    - distance
+    - shots
+    - target_life_before
+    - target_life_after
+    - actor_bullets_before
+    - actor_bullets_after
+    - target_arrows_before
+    - target_arrows_after
+    - created_at
+
+    action_type inicial:
+    - TIRO
+    - GATLING
+    - CERVEJA
+    - INDIOS
+  end note
+
+  :Salvar evento no historico da partida;
+else (nao)
+  :Opcionalmente salvar evento informativo;
+endif
+
+:Buscar jogadores da partida;
+:Buscar historico recente da partida;
+:BeliefService.update_beliefs_from_history();
+
+partition "Atualizacao de crenca" {
+  :Para cada evento do historico;
+
+  if (actor e Xerife revelado?) then (sim)
+    :Manter actor como IdentityDTO.XERIFE = 1.0;
+  else (nao)
+    :Avaliar acao pelo papel conhecido/provavel do alvo;
+  endif
+
+  if (acao == TIRO) then (sim)
+    if (alvo e Xerife revelado?) then (sim)
+      :Aumentar suspeita de FORA_DA_LEI no actor;
+      :Aumentar um pouco suspeita de RENEGADO;
+      :Reduzir suspeita de ASSISTENTE;
+    elseif (alvo tem alta chance de FORA_DA_LEI?) then (sim)
+      :Aumentar suspeita de XERIFE/ASSISTENTE no actor;
+      :Reduzir suspeita de FORA_DA_LEI;
+    else (alvo oculto)
+      :Aplicar ajuste leve conforme crenca atual do alvo;
+    endif
+  elseif (acao == CERVEJA) then (sim)
+    if (alvo e Xerife revelado?) then (sim)
+      :Aumentar suspeita de ASSISTENTE no actor;
+      :Reduzir suspeita de FORA_DA_LEI;
+    else (outro alvo)
+      :Ajuste leve conforme contexto;
+    endif
+  else (outras acoes)
+    :Aplicar regras especificas da acao;
+  endif
+
+  :Zerar probabilidade de XERIFE para nao-Xerife quando Xerife revelado e conhecido;
+  :Normalizar IdentityProbabilityDTO;
+  :Salvar papel_probability atualizado no PlayerDTO/estado da partida;
+}
+
+:Proxima chamada em /dices/execution;
+:ShotPolicyService.predict(execution);
+:Calcular score_crenca por candidato;
+
+note right
+  score_crenca usa:
+
+  - IdentityDTO do jogador atual
+  - papel_probability do alvo
+  - vida/balas do alvo
+  - flechas do alvo
+  - distancia
+  - tiros disponiveis
+  - penalidade se alvo morto
+  - penalidade se alvo for o proprio jogador
+end note
+
+if (modelo neural carregado?) then (sim)
+  :score_final = score_neural * 0.35 + score_crenca * 0.65;
+else (nao)
+  :score_final = score_crenca;
+endif
+
+:Escolher alvo com maior score_final;
+:Aplicar predicao em user_bullets;
+
+stop
+@enduml

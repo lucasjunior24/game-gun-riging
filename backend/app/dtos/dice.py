@@ -2,6 +2,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, TypeAdapter
 
 from app.dtos.base import BaseDTO
+from app.dtos.history import GameActionHistoryDTO
 from app.dtos.players import PlayerDTO
 
 
@@ -46,3 +47,4 @@ class ExecuteDicesDTO(BaseDTO):
     table_situation: str = Field(default="")
     one_distance: ExecuteDistanceDTO
     two_distance: Optional[ExecuteDistanceDTO] = Field(default=None)
+    action_history: list[GameActionHistoryDTO] = Field(default_factory=list)

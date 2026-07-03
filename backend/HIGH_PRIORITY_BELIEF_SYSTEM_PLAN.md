@@ -131,7 +131,7 @@ Renegado: 0.00
 Assistente: 0.00
 ```
 
-Depois, quando a feature de historico de acoes for implementada, esse mesmo servico pode atualizar as suspeitas com base em eventos.
+O historico de acoes ja pode atualizar suspeitas com base em eventos tipados (`GameActionHistoryDTO`) antes da decisao de tiro.
 
 ## Passo 3: definir matriz de prioridade por papel atual
 

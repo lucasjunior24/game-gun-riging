@@ -47,6 +47,7 @@ Campos mais importantes:
 - `table_situation`: descricao do estado da mesa.
 - `one_distance`: dados e alvos possiveis para distancia `1`.
 - `two_distance`: dados e alvos possiveis para distancia `2`.
+- `action_history`: acoes anteriores da partida usadas para atualizar suspeitas de identidade.
 
 Cada distancia usa `ExecuteDistanceDTO`:
 
@@ -114,6 +115,15 @@ score_final = score_neural * 0.35 + score_crenca * 0.65
 ```
 
 Quando o modelo nao esta carregado, o servico usa somente o score de crenca.
+
+Antes de calcular os scores, se `action_history` vier preenchido, o servico aplica o historico no `BeliefService`. Isso atualiza o `papel_probability` dos jogadores no proprio DTO de execucao.
+
+Exemplos de efeito do historico:
+
+- se um jogador atirou no Xerife revelado, aumenta sua suspeita de `FORA_DA_LEI`;
+- se um jogador ajudou o Xerife com `CERVEJA`, aumenta sua suspeita de `ASSISTENTE`;
+- se um jogador atirou em alguem com alta chance de `FORA_DA_LEI`, aumenta sua suspeita de aliado do Xerife;
+- jogadores que nao sao o Xerife revelado permanecem com probabilidade `XERIFE = 0.0`.
 
 ## Carregamento do modelo
 

@@ -5,7 +5,7 @@ from app.auth.token import get_token
 
 from app.controllers.history import HistoryController
 from app.dtos.dice import DiceShowDTO, ExecuteDicesDTO, UserBulletsDTO
-from app.dtos.history import HistoryDTO
+from app.dtos.history import GameActionHistoryDTO, HistoryDTO
 from app.dtos.message import MessageDTO
 from app.dtos.response import (
     ResponseDTO,
@@ -71,5 +71,27 @@ async def add_messages_by_game_id(
     messages_dto = history_controller.create_messages_dto(messages)
     data = history_controller.add_messages_by_game_id(
         messages=messages_dto, game_id=game_id
+    )
+    return ResponseDTO(data=data, message="success")
+
+
+@history_router.put("/actions", response_model=ResponseModelDTO[HistoryDTO])
+async def add_actions(
+    history_id: str,
+    actions: list[GameActionHistoryDTO],
+):
+    history_controller = ApplicationManager.get(HistoryController)
+    data = history_controller.add_actions(actions=actions, history_id=history_id)
+    return ResponseDTO(data=data, message="success")
+
+
+@history_router.put("/actions/game", response_model=ResponseModelDTO[HistoryDTO])
+async def add_actions_by_game_id(
+    game_id: str,
+    actions: list[GameActionHistoryDTO],
+):
+    history_controller = ApplicationManager.get(HistoryController)
+    data = history_controller.add_actions_by_game_id(
+        actions=actions, game_id=game_id
     )
     return ResponseDTO(data=data, message="success")

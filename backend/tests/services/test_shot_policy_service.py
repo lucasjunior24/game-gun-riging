@@ -1,5 +1,6 @@
 from app.dtos.character import IdentityDTO
 from app.dtos.dice import ExecuteDicesDTO, ExecuteDistanceDTO
+from app.dtos.history import ActionTypeDTO, GameActionHistoryDTO
 from app.dtos.players import PlayerDTO
 from app.services.policy_service import ShotPolicyService
 
@@ -90,3 +91,30 @@ def test_apply_prediction_fills_user_bullets():
 
     assert result.one_distance.user_bullets[0].user_name == "Outlaw"
     assert result.one_distance.user_bullets[0].shots == 2
+
+
+def test_action_history_updates_belief_before_target_decision():
+    suspicious = PlayerDTO(user_name="Suspicious", position=1, bullet=3)
+    assistant = PlayerDTO(
+        user_name="Assistant",
+        position=2,
+        bullet=3,
+        papel_probability={IdentityDTO.ASSISTENTE.value: 1.0},
+    )
+    execution = make_execution(suspicious, assistant)
+    execution.action_history = [
+        GameActionHistoryDTO(
+            game_id="game-1",
+            actor_user_name="Suspicious",
+            action_type=ActionTypeDTO.TIRO,
+            target_user_name="Sheriff",
+            target_identity=IdentityDTO.XERIFE,
+            shots=1,
+        )
+    ]
+    service = ShotPolicyService(model_path="missing-shot-policy-model.pt")
+
+    prediction = service.predict(execution)
+
+    assert suspicious.papel_probability.fora_da_lei > suspicious.papel_probability.assistente
+    assert prediction.decisions[0].target_user_name == "Suspicious"

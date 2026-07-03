@@ -61,6 +61,7 @@ class ShotPolicyService:
         self.shot_model.eval()
 
     def predict(self, execution: ExecuteDicesDTO) -> ShotPolicyPredictionDTO:
+        self._update_beliefs_from_action_history(execution)
         decisions = []
         for distance_label in ("1", "2"):
             distance = self.get_execution_distance(execution, distance_label)
@@ -317,6 +318,12 @@ class ShotPolicyService:
         if self._get_current_identity(execution) == IdentityDTO.XERIFE:
             return execution.current_player.user_name
 
+        for action in execution.action_history:
+            if self._is_action_identity(action.actor_identity, IdentityDTO.XERIFE):
+                return action.actor_user_name
+            if self._is_action_identity(action.target_identity, IdentityDTO.XERIFE):
+                return action.target_user_name
+
         for distance_label in ("1", "2"):
             distance = self.get_execution_distance(execution, distance_label)
             if not distance:
@@ -325,3 +332,38 @@ class ShotPolicyService:
                 if self.belief_service.is_revealed_sheriff(player):
                     return player.user_name
         return None
+
+    def _update_beliefs_from_action_history(self, execution: ExecuteDicesDTO) -> None:
+        if not execution.action_history:
+            return
+
+        players = self._collect_execution_players(execution)
+        self.belief_service.update_beliefs_from_history(
+            players,
+            execution.action_history,
+            self._get_revealed_sheriff_user_name(execution),
+        )
+
+    def _collect_execution_players(self, execution: ExecuteDicesDTO) -> list[PlayerDTO]:
+        players: list[PlayerDTO] = [execution.current_player]
+        for distance_label in ("1", "2"):
+            distance = self.get_execution_distance(execution, distance_label)
+            if not distance:
+                continue
+            for player in distance.players_options:
+                if not self._has_player(players, player.user_name):
+                    players.append(player)
+        return players
+
+    def _has_player(self, players: list[PlayerDTO], user_name: str) -> bool:
+        for player in players:
+            if player.user_name == user_name:
+                return True
+        return False
+
+    def _is_action_identity(
+        self, value: IdentityDTO | str | None, identity: IdentityDTO
+    ) -> bool:
+        if value is None:
+            return False
+        return self.belief_service.coerce_identity(value) == identity
