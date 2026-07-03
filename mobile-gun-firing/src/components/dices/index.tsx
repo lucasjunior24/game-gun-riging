@@ -1,14 +1,14 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { Player } from "@/src/dtos/players";
+import { validDices } from "@/src/api/dices";
 import { DiceCombination, DiceCombinationUndefined } from "@/src/dtos/dice";
+import { GameStatus } from "@/src/dtos/game_match";
+import { Player } from "@/src/dtos/players";
 import { pass_player } from "@/src/game/init_game";
 import { locked_dice, play_dice, sum_shots } from "@/src/game/play_dice";
-import { View, Text, StyleSheet, Pressable } from "react-native";
-import Shot from "../shot";
-import DiceItem from "./diceItem";
 import { sleep } from "@/src/utils/sleep";
-import { validDices } from "@/src/api/dices";
-import { GameStatus } from "@/src/dtos/game_match";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
+import Shot from "../shotComponent";
+import DiceItem from "./diceItem";
 
 interface DicesProps {
     players: Player[];
@@ -20,7 +20,7 @@ interface DicesProps {
     setPlayerMoment: (user_id: number, user_name: string) => void;
 }
 
-const Dices = ({
+const DicesComponent = ({
     players,
     playerMoment,
     playerName,
@@ -261,7 +261,7 @@ const Dices = ({
         </View>
     );
 };
-export default Dices;
+export default DicesComponent;
 
 const styles = StyleSheet.create({
     container: {

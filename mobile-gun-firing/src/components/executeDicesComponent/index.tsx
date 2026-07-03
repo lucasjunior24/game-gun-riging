@@ -1,15 +1,15 @@
-import { Player } from "@/src/dtos/players";
 import { DiceCombination } from "@/src/dtos/dice";
+import { Player } from "@/src/dtos/players";
 
 import { play_dice } from "@/src/game/play_dice";
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 interface DicesProps {
     handleSetPlayers(players: Player[]): void;
     players: Player[];
 }
-const ExecuteDices = ({ handleSetPlayers, players }: DicesProps) => {
+const ExecuteDicesComponent = ({ handleSetPlayers, players }: DicesProps) => {
     const [diceOne, setDiceOne] = useState<DiceCombination | undefined>();
     const [diceTwo, setDiceTwo] = useState<DiceCombination | undefined>();
     const [diceTree, setDiceTree] = useState<DiceCombination | undefined>();
@@ -160,7 +160,7 @@ const ExecuteDices = ({ handleSetPlayers, players }: DicesProps) => {
         </View>
     );
 };
-export default ExecuteDices;
+export default ExecuteDicesComponent;
 
 const styles = StyleSheet.create({
     container: {

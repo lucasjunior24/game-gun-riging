@@ -4,12 +4,12 @@ import { ResponseDTO } from "../dtos/response";
 import { api } from "./axios";
 
 export async function validDices(
-    dices: DiceCombination[]
+    dices: DiceCombination[],
 ): Promise<DiceCombination[] | undefined> {
     try {
         const response = await api.put<ResponseDTO<DiceCombination[]>>(
             "/dices/valid",
-            dices
+            dices,
         );
         return response.data.data;
     } catch (error) {
@@ -17,13 +17,13 @@ export async function validDices(
     }
 }
 
-export async function executeDices(
-    execution: ExecuteDicesDTO
+export async function executeDicesFetch(
+    execution: ExecuteDicesDTO,
 ): Promise<ExecuteDicesDTO | undefined> {
     try {
         const response = await api.put<ResponseDTO<ExecuteDicesDTO>>(
             "/dices/execution",
-            execution
+            execution,
         );
         // console.log(response);
         return response.data.data;

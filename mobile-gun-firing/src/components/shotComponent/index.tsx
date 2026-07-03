@@ -1,4 +1,6 @@
-import { Modal, View, Text, Pressable, StyleSheet } from "react-native";
+import { Player } from "@/src/dtos/players";
+import { players_to_shot } from "@/src/game/shoot";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {
     PropsWithChildren,
     useCallback,
@@ -6,22 +8,20 @@ import {
     useMemo,
     useState,
 } from "react";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Player } from "@/src/dtos/players";
-import { players_to_shot } from "@/src/game/shoot";
+import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ButtonBase } from "../buttonBase";
 
 import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
 
-import ListShots from "./listShots";
-import { executeDices } from "@/src/api/dices";
-import { sleep } from "@/src/utils/sleep";
+import { executeDicesFetch } from "@/src/api/dices";
 import { GameStatus } from "@/src/dtos/game_match";
+import { sleep } from "@/src/utils/sleep";
+import ListShots from "./listShots";
 
 // import { createPlayer } from "@/src/api/player";
 
-function parsePlayers(new_players: Player[], user: userBullets) {
+function executeShotInPlayers(new_players: Player[], user: userBullets) {
     const players = new_players.map((p) => {
         if (p.user_name === user.user_name && p.bullet) {
             p.bullet -= user.shots;
@@ -65,7 +65,7 @@ export interface userBullets {
     shots: number;
 }
 
-export default function Shot({
+export default function ShotComponent({
     isVisible,
     gameId,
     playerMoment,
@@ -84,13 +84,13 @@ export default function Shot({
     const optionsOneShoot = players_to_shot(
         playerMoment + 1,
         livePlayers.length,
-        1
+        1,
     );
 
     const optionsTwoShoot = players_to_shot(
         playerMoment + 1,
         livePlayers.length,
-        livePlayers.length === 2 ? 1 : 2
+        livePlayers.length === 2 ? 1 : 2,
     );
 
     const playersOneShot = useMemo(() => {
@@ -127,23 +127,23 @@ export default function Shot({
     const runExecution = useCallback(() => {
         let players_updated: Player[] = players;
         userOneBullets.forEach((user) => {
-            players_updated = parsePlayers(players_updated, user);
+            players_updated = executeShotInPlayers(players_updated, user);
         });
 
         userTwoBullets.forEach((user) => {
-            players_updated = parsePlayers(players_updated, user);
+            players_updated = executeShotInPlayers(players_updated, user);
         });
 
         players_updated = checkPlayersIsLive(players_updated);
         console.log(
             players_updated.map(
-                (p) => `${p.user_name} - ${p.bullet} - ${p.is_alive}`
-            )
+                (p) => `${p.user_name} - ${p.bullet} - ${p.is_alive}`,
+            ),
         );
 
         handleSetPlayers(players_updated);
         const index = players_updated.findIndex(
-            (p) => p.user_name === playerName
+            (p) => p.user_name === playerName,
         );
         // console.log("index: ", index);
         handleSetPlayer(index, players_updated);
@@ -194,7 +194,7 @@ export default function Shot({
         }
 
         // await createPlayer(currentPlayer);
-        const data = await executeDices(executionDTO);
+        const data = await executeDicesFetch(executionDTO);
         if (data) {
             if (data.one_distance.user_bullets) {
                 await sleep(2);
