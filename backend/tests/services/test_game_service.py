@@ -13,7 +13,7 @@ def test_public_state_does_not_expose_private_identity_or_belief():
 
     state = service.create_game(CreateAuthoritativeGameDTO(player_name="Lucas"))
 
-    assert state.players[0].revealed_identity == IdentityDTO.XERIFE
+    assert state.players[0].revealed_identity == IdentityDTO.XERIFE.value
     assert state.players[1].revealed_identity is None
     assert not hasattr(state.players[1], "papel_probability")
     assert not hasattr(state.players[1], "identity")
@@ -32,9 +32,7 @@ def test_execute_shots_updates_life_history_and_turn():
             shots_by_distance=[
                 ShootDistanceCommandDTO(
                     distance="1",
-                    user_bullets=[
-                        UserBulletsDTO(user_name=target.user_name, shots=2)
-                    ],
+                    user_bullets=[UserBulletsDTO(user_name=target.user_name, shots=2)],
                 )
             ],
         ),
@@ -71,7 +69,9 @@ def test_history_updates_belief_inside_backend_only():
 
     internal_state = service._games[state.game_id]
     internal_outlaw = next(
-        player for player in internal_state.players if player.user_name == outlaw.user_name
+        player
+        for player in internal_state.players
+        if player.user_name == outlaw.user_name
     )
     public_outlaw = next(
         player
@@ -79,7 +79,10 @@ def test_history_updates_belief_inside_backend_only():
         if player.user_name == outlaw.user_name
     )
 
-    assert internal_outlaw.papel_probability.fora_da_lei > internal_outlaw.papel_probability.assistente
+    assert (
+        internal_outlaw.papel_probability.fora_da_lei
+        > internal_outlaw.papel_probability.assistente
+    )
     assert internal_outlaw.papel_probability.xerife == 0
     assert not hasattr(public_outlaw, "papel_probability")
 
@@ -103,4 +106,4 @@ def test_winner_is_resolved_when_sheriff_dies():
     )
 
     assert updated.status == "Done"
-    assert updated.winner == TeamDTO.FORA_DA_LEI
+    assert updated.winner == TeamDTO.FORA_DA_LEI.value

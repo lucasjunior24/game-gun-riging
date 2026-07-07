@@ -2,14 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.auth.token import get_token
 from app.dtos.game_state import (
+    BotTurnResultDTO,
     CreateAuthoritativeGameDTO,
     ExecuteShotsCommandDTO,
     FinishTurnCommandDTO,
     GameStateDTO,
+    RollDiceCommandDTO,
 )
 from app.dtos.response import ResponseDTO, ResponseModelDTO
 from app.services.game_service import GameService
-
 
 games_router = APIRouter(
     prefix="/games",
@@ -57,4 +58,26 @@ async def finish_turn(game_id: str, command: FinishTurnCommandDTO):
         state = game_service.finish_turn(game_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error))
+    return ResponseDTO(data=state, message="success")
+
+
+@games_router.post(
+    "/{game_id}/dice/roll", response_model=ResponseModelDTO[GameStateDTO]
+)
+async def roll_dice(game_id: str, command: RollDiceCommandDTO):
+    try:
+        state = game_service.roll_dice(game_id, command)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    return ResponseDTO(data=state, message="success")
+
+
+@games_router.post("/{game_id}/bot-turn", response_model=ResponseModelDTO[GameStateDTO])
+async def execute_bot_turn(game_id: str):
+    try:
+        state = game_service.execute_bot_turn(game_id)
+    except KeyError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
     return ResponseDTO(data=state, message="success")

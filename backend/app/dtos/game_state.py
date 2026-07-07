@@ -57,3 +57,11 @@ class ExecuteShotsCommandDTO(BaseDTO):
 
 class FinishTurnCommandDTO(BaseDTO):
     actor_user_id: int
+
+
+class RollDiceCommandDTO(BaseDTO):
+    locked_dice_indexes: list[int] = Field(default_factory=list)
+
+
+class BotTurnResultDTO(BaseDTO):
+    decisions: list[ShootDistanceCommandDTO] = Field(default_factory=list)
