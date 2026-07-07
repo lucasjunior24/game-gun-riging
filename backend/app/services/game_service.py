@@ -121,6 +121,18 @@ class GameService:
         self._advance_turn(state)
         return self.to_public_state(state)
 
+    def get_dice_names(self, dice: str) -> str:
+        if dice == "3":
+            return "Dinamite"
+        elif dice == "4":
+            return "Cerveja"
+        elif dice == "5":
+            return "Flexa"
+        elif dice == "6":
+            return "Metralhadora"
+
+        return dice
+
     def roll_dice(self, game_id: str, command: RollDiceCommandDTO) -> GameStateDTO:
         state = self._get_game(game_id)
         locked = set(command.locked_dice_indexes)
@@ -130,7 +142,14 @@ class GameService:
             if i in locked:
                 continue
             face = random.choice(dice_faces)
-            dice_results.append(DiceShowDTO(dice=int(face), locked=False, show=face))
+            dice = self.get_dice_names(face)
+            dice_results.append(
+                DiceShowDTO(
+                    dice=int(face),
+                    locked=True if dice == "Dinamite" else False,
+                    show=dice,
+                )
+            )
         state.dice = dice_results
         return self.to_public_state(state)
 
@@ -213,6 +232,7 @@ class GameService:
             players=[self._to_public_player(player) for player in state.players],
             available_actions=self._available_actions(state),
             winner=state.winner,
+            dice=state.dice if hasattr(state, "dice") else [],
         )
 
     def _create_players(

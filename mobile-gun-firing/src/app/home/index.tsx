@@ -1,4 +1,3 @@
-import { createGame } from "@/src/api/match_game";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -9,11 +8,9 @@ export default function Home() {
         try {
             console.log("handle Create Game");
             setIsLoading(true);
-            const data = await createGame({ player_name: "Lucas" });
-            console.log(data?._id);
+
             router.push({
                 pathname: `/bangMatch`,
-                params: { game_id: data?._id },
             });
         } finally {
             setIsLoading(false);

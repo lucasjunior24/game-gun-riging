@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Player } from "@/src/dtos/players";
+import { PublicPlayer } from "@/src/dtos/players";
 import { Image, useImage } from "expo-image";
+
 type CardPlayerProps = {
-    player: Player;
+    player: PublicPlayer;
     playerMoment: number;
     index: number;
 };
@@ -13,16 +14,13 @@ export default function CardPlayer({
     playerMoment,
     index,
 }: CardPlayerProps) {
-    const image = useImage(player.character?.avatar as string, {
+    const avatarUrl = player.character?.avatar ?? "";
+    const image = useImage(avatarUrl, {
         maxWidth: 400,
         onError(error) {
             console.error("Loading failed:", error.message);
         },
     });
-
-    if (!image) {
-        return <Text>Image is loading...</Text>;
-    }
 
     return (
         <View
@@ -31,28 +29,40 @@ export default function CardPlayer({
                 styles.borderedBox,
                 {
                     backgroundColor:
-                        player.identity === "Xerife" ? "#eecb02" : "white",
+                        player.revealed_identity === "Xerife"
+                            ? "#eecb02"
+                            : "white",
                     borderColor: playerMoment === index ? "green" : "white",
                 },
             ]}
         >
             <View>
-                {player.character?.avatar && (
+                {avatarUrl && image ? (
                     <Image
                         style={styles.image}
                         source={image}
                         contentFit="cover"
                         transition={1000}
                     />
+                ) : (
+                    <View style={[styles.image, styles.placeholderImage]}>
+                        <Text style={styles.placeholderText}>
+                            {player.user_name.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
                 )}
             </View>
             <View style={styles.player}>
                 <View>
                     <Text style={styles.parentTitle}>
-                        {player.user_name} - {player.identity}
+                        {player.user_name}
+                        {player.revealed_identity === "Xerife"
+                            ? " - Xerife"
+                            : ""}
                     </Text>
                     <Text style={styles.character}>
-                        {player.character?.character} - {player.bullet}
+                        {player.character?.character ?? "Carregando..."} -{" "}
+                        {player.bullet}
                     </Text>
                 </View>
                 {playerMoment === index && (
@@ -80,6 +90,17 @@ const styles = StyleSheet.create({
     image: {
         height: 60,
         width: 60,
+    },
+    placeholderImage: {
+        backgroundColor: "#e0e0e0",
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    placeholderText: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#666",
     },
     player: {
         width: "80%",

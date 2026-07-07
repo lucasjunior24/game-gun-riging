@@ -42,3 +42,5 @@ app-example
 
 .rules
 .rules/*
+.vscode
+.vscode/*

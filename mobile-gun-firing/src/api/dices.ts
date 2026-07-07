@@ -1,3 +1,9 @@
+/**
+ * @deprecated Endpoints antigos substituídos pelos novos endpoints REST:
+ * - /dices/valid -> POST /games/{game_id}/dice/roll
+ * - /dices/execution -> POST /games/{game_id}/bot-turn
+ * Usar api/game.ts em vez deste arquivo.
+ */
 import { isAxiosError } from "axios";
 import { DiceCombination, ExecuteDicesDTO } from "../dtos/dice";
 import { ResponseDTO } from "../dtos/response";

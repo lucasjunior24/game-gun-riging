@@ -1,9 +1,13 @@
+/**
+ * @deprecated A aplicação de tiros agora é feita pelo backend via POST /games/{game_id}/actions/shots.
+ * Usar executeShots() de api/game.ts em vez das funções locais.
+ */
 import { Player } from "../dtos/players";
 
 export function shoot_to_the_right(
     player_moment: number,
     size: number,
-    distance: number
+    distance: number,
 ): number {
     if (size === Number(player_moment)) {
         return distance;
@@ -18,7 +22,7 @@ export function shoot_to_the_right(
 export function shoot_to_the_left(
     player_moment: number,
     size: number,
-    distance: number
+    distance: number,
 ): number {
     if (size === player_moment) {
         return size - distance;
@@ -40,17 +44,17 @@ export function shoot_to_the_left(
 export function players_to_shot(
     current_player: number,
     total_players: number,
-    dice: 1 | 2
+    dice: 1 | 2,
 ) {
     const one_short_right = shoot_to_the_right(
         current_player,
         total_players,
-        dice
+        dice,
     );
     const one_short_left = shoot_to_the_left(
         current_player,
         total_players,
-        dice
+        dice,
     );
     const players = new Set([one_short_left - 1, one_short_right - 1]);
     const playersArray = Array.from(players);
@@ -64,7 +68,7 @@ export function definirTiros(
     playerShotedName: string,
     shotTotal: number,
     handleSetPlayers: (players: Player[]) => void,
-    handleSetPlayer: (playerMoment: number) => void
+    handleSetPlayer: (playerMoment: number) => void,
 ): number {
     if (state > 0) {
         const new_players = players

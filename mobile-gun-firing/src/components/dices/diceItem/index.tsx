@@ -1,13 +1,13 @@
-import { DiceCombinationUndefined, DiceOptions } from "@/src/dtos/dice";
+import { DiceShowDTO } from "@/src/dtos/gameState";
 
 import { Pressable, View, Text, StyleSheet } from "react-native";
 
 interface DiceItemProps {
     handleDice: () => void;
-    dice: DiceCombinationUndefined;
+    dice: DiceShowDTO;
 }
-function getEmogiDice(dice: DiceOptions | undefined) {
-    switch (dice) {
+function getEmogiDice(show: string | undefined) {
+    switch (show) {
         case "Dinamite":
             return "🧨";
         case "Cerveja":
@@ -17,7 +17,7 @@ function getEmogiDice(dice: DiceOptions | undefined) {
         case "Metralhadora":
             return "ᡕᠵ╤ᡁ᠊デ━";
         default:
-            return dice;
+            return show;
     }
 }
 export default function DiceItem({ dice, handleDice }: DiceItemProps) {

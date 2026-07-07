@@ -3,7 +3,7 @@ import { PropsWithChildren, useMemo } from "react";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
 import { ButtonBase } from "../../buttonBase";
-import { Team } from "@/src/dtos/characters";
+import { Team } from "@/src/dtos/gameState";
 
 type ShootProps = PropsWithChildren<{
     isVisible: boolean;

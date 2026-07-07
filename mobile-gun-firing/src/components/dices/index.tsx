@@ -1,9 +1,5 @@
-import { validDices } from "@/src/api/dices";
-import { DiceCombination, DiceCombinationUndefined } from "@/src/dtos/dice";
-import { GameStatus } from "@/src/dtos/game_match";
-import { Player } from "@/src/dtos/players";
-import { pass_player } from "@/src/game/init_game";
-import { locked_dice, play_dice, sum_shots } from "@/src/game/play_dice";
+import { executeBotTurn, finishTurn, rollDice } from "@/src/api/game";
+import { GameStateDTO, RollDiceCommandDTO } from "@/src/dtos/gameState";
 import { sleep } from "@/src/utils/sleep";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -11,129 +7,38 @@ import Shot from "../shotComponent";
 import DiceItem from "./diceItem";
 
 interface DicesProps {
-    players: Player[];
-    playerMoment: number;
-    playerName: string;
-    gameId: string;
-    gameStatus: GameStatus;
-    handleSetPlayers(players: Player[]): void;
-    setPlayerMoment: (user_id: number, user_name: string) => void;
+    gameState: GameStateDTO;
+    onStateUpdate: (newState: GameStateDTO) => void;
 }
 
-const DicesComponent = ({
-    players,
-    playerMoment,
-    playerName,
-    gameId,
-    gameStatus,
-    handleSetPlayers,
-    setPlayerMoment,
-}: DicesProps) => {
-    const [diceOne, setDiceOne] = useState<DiceCombinationUndefined>();
-    const [diceTwo, setDiceTwo] = useState<DiceCombinationUndefined>();
-    const [diceThree, setDiceThree] = useState<DiceCombinationUndefined>();
-    const [diceFour, setDiceFour] = useState<DiceCombinationUndefined>();
-    const [diceFive, setDiceFive] = useState<DiceCombinationUndefined>();
-
+const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
+    const [lockedDiceIndexes, setLockedDiceIndexes] = useState<number[]>([]);
     const [openModal, setOpenModal] = useState(false);
     const [totalDiceRolls, setTotalDiceRolls] = useState(0);
+
     function clearDices() {
-        setDiceOne(undefined);
-        setDiceTwo(undefined);
-        setDiceThree(undefined);
-        setDiceFour(undefined);
-        setDiceFive(undefined);
+        setLockedDiceIndexes([]);
         setTotalDiceRolls(0);
     }
-    const passPlayer = useCallback(() => {
-        const new_pl = pass_player(playerMoment, players.length);
-        const player = players[new_pl];
 
-        setPlayerMoment(new_pl, player.user_name);
-        clearDices();
-    }, [playerMoment, players, setPlayerMoment]);
+    const currentPlayer = gameState.current_player;
 
-    function handleSetPlayer(playerMoment: number, new_players: Player[]) {
-        const new_pl = pass_player(playerMoment, new_players.length);
-        const player = new_players[new_pl];
-
-        setPlayerMoment(new_pl, player.user_name);
-        // setPlayerMoment(playerMoment, playerName);
-    }
-    const player = players.filter((p) => p.user_name === playerName)[0];
-    console.log("playerMoment: ", playerMoment);
-    const sumShots = sum_shots(diceOne, diceTwo, diceThree, diceFour, diceFive);
     const playAllDices = useCallback(async () => {
-        if (
-            diceOne?.locked !== true ||
-            diceTwo?.locked !== true ||
-            diceThree?.locked !== true ||
-            diceFour?.locked !== true ||
-            diceFive?.locked !== true
-        ) {
-            let dices: Map<string, DiceCombination> = new Map();
-            dices.set("1", play_dice());
-            dices.set("2", play_dice());
-            dices.set("3", play_dice());
-            dices.set("4", play_dice());
-            dices.set("5", play_dice());
-
-            console.log();
-
-            const valuesArray = Array.from(dices.values());
-            // console.log("dices: ", valuesArray);
-            const result = await validDices(valuesArray);
-
-            if (result) {
-                if (diceOne?.locked !== true) {
-                    setDiceOne(result[0]);
-                }
-                if (diceTwo?.locked !== true) {
-                    setDiceTwo(result[1]);
-                }
-                if (diceThree?.locked !== true) {
-                    setDiceThree(result[2]);
-                }
-                if (diceFour?.locked !== true) {
-                    setDiceFour(result[3]);
-                }
-                if (diceFive?.locked !== true) {
-                    setDiceFive(result[4]);
-                }
-            }
-            dices.clear();
+        const command: RollDiceCommandDTO = {
+            locked_dice_indexes: lockedDiceIndexes,
+        };
+        const newState = await rollDice(gameState.game_id, command);
+        if (newState) {
+            onStateUpdate(newState);
         }
+        setTotalDiceRolls((state) => state + 1);
+    }, [gameState.game_id, lockedDiceIndexes, onStateUpdate]);
 
-        setTotalDiceRolls((state) => {
-            return (state += 1);
-        });
-    }, [
-        diceFive?.locked,
-        diceFour?.locked,
-        diceOne?.locked,
-        diceThree?.locked,
-        diceTwo?.locked,
-    ]);
-
-    // function runMetralhadora() {
-    //   const players_now = players.map((p) => {
-    //     if (p.user_id === Number(playerMoment)) {
-    //       return p;
-    //     }
-    //     if (p.character && p.bullet) {
-    //       p.bullet -= 1;
-    //     }
-    //     return p;
-    //   });
-    //   handleSetPlayers(players_now);
-    // }
     function exeDices() {
-        // runMetralhadora();
         setOpenModal(true);
     }
-    function handleClose() {
-        // runMetralhadora();
 
+    function handleClose() {
         setOpenModal(false);
     }
 
@@ -142,38 +47,75 @@ const DicesComponent = ({
         clearDices();
     }
 
+    const toggleLockDice = (index: number) => {
+        setLockedDiceIndexes((prev) =>
+            prev.includes(index)
+                ? prev.filter((i) => i !== index)
+                : [...prev, index],
+        );
+    };
+
+    // Turno do bot: executa rolagens e tiros automaticamente
     const botPlayAllDices = useCallback(async () => {
+        if (!currentPlayer.is_bot) return;
+
         await sleep(3);
-        if (player.is_bot && totalDiceRolls < 3) {
-            // console.log("play All Dices: ", totalDiceRolls);
+        if (totalDiceRolls < 3) {
             await playAllDices();
         }
-        if (player.is_bot && totalDiceRolls === 2) {
+        if (totalDiceRolls === 2) {
             await sleep(3);
             exeDices();
-            // passPlayer();
         }
-    }, [playAllDices, player.is_bot, totalDiceRolls]);
+    }, [playAllDices, currentPlayer.is_bot, totalDiceRolls]);
 
     useEffect(() => {
-        if (gameStatus === "Running") {
+        if (gameState.status === "Running") {
             botPlayAllDices();
         }
-    }, [botPlayAllDices, gameStatus]);
+    }, [botPlayAllDices, gameState.status]);
 
-    // console.log("shots:  ", sumShoots);
-    if (player === undefined) {
-        return <Text>loading player...</Text>;
-    }
+    // Bot turn: chama endpoint dedicado quando visível e é bot
+    useEffect(() => {
+        if (
+            gameState.status === "Running" &&
+            currentPlayer.is_bot &&
+            openModal
+        ) {
+            executeBotTurn(gameState.game_id).then((newState) => {
+                if (newState) onStateUpdate(newState);
+            });
+        }
+    }, [
+        currentPlayer.is_bot,
+        openModal,
+        gameState.game_id,
+        gameState.status,
+        onStateUpdate,
+    ]);
+
     return (
         <View style={styles.container}>
             <View style={styles.footer}>
                 <View style={styles.card}>
                     <Text style={styles.parentTitle}>Jogador atual</Text>
-                    <Text style={styles.parentTitle}>{player.user_name}</Text>
+                    <Text style={styles.parentTitle}>
+                        {currentPlayer.user_name}
+                    </Text>
                     <View style={styles.card}>
-                        <Pressable onPress={passPlayer} style={styles.button}>
-                            <Text style={styles.text}>Pass Player</Text>
+                        <Pressable
+                            onPress={async () => {
+                                const newState = await finishTurn(
+                                    gameState.game_id,
+                                );
+                                if (newState) {
+                                    onStateUpdate(newState);
+                                    clearDices();
+                                }
+                            }}
+                            style={styles.button}
+                        >
+                            <Text style={styles.text}>Passar Turno</Text>
                         </Pressable>
                     </View>
                     <View style={styles.card}>
@@ -188,7 +130,7 @@ const DicesComponent = ({
                             ]}
                             disabled={totalDiceRolls > 2}
                         >
-                            <Text style={styles.text}>Play All Dices</Text>
+                            <Text style={styles.text}>Rolar Dados</Text>
                         </Pressable>
                     </View>
                     <Text style={styles.parentTitle}>
@@ -202,59 +144,29 @@ const DicesComponent = ({
                                 { backgroundColor: "green" },
                             ]}
                         >
-                            <Text style={styles.text}>Execute Dices</Text>
+                            <Text style={styles.text}>Executar Tiros</Text>
                         </Pressable>
                     </View>
                 </View>
                 <View style={styles.card}>
-                    <Text style={styles.parentTitle}>Dados travados</Text>
-                    <DiceItem
-                        dice={diceOne}
-                        handleDice={() =>
-                            setDiceOne((state) => locked_dice(state))
-                        }
-                    />
-                    <DiceItem
-                        dice={diceTwo}
-                        handleDice={() =>
-                            setDiceTwo((state) => locked_dice(state))
-                        }
-                    />
-                    <DiceItem
-                        dice={diceThree}
-                        handleDice={() =>
-                            setDiceThree((state) => locked_dice(state))
-                        }
-                    />
-                    <DiceItem
-                        dice={diceFour}
-                        handleDice={() =>
-                            setDiceFour((state) => locked_dice(state))
-                        }
-                    />
-                    <DiceItem
-                        dice={diceFive}
-                        handleDice={() =>
-                            setDiceFive((state) => locked_dice(state))
-                        }
-                    />
+                    <Text style={styles.parentTitle}>Dados</Text>
+                    {gameState.dice.map((d, i) => (
+                        <DiceItem
+                            key={i}
+                            dice={d}
+                            handleDice={() => toggleLockDice(i)}
+                        />
+                    ))}
                 </View>
             </View>
             <View>
-                {gameStatus === "Running" && (
+                {gameState.status === "Running" && (
                     <Shot
                         isVisible={openModal}
                         onClose={handleClose}
-                        finishPlayer={finishPlayer}
-                        playerMoment={playerMoment}
-                        players={players}
-                        gameId={gameId}
-                        currentPlayer={player}
-                        shots={sumShots}
-                        handleSetPlayers={handleSetPlayers}
-                        playerName={playerName}
-                        gameStatus={gameStatus}
-                        handleSetPlayer={handleSetPlayer}
+                        gameState={gameState}
+                        onStateUpdate={onStateUpdate}
+                        onFinishPlayer={finishPlayer}
                     />
                 )}
             </View>

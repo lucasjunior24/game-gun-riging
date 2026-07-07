@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet } from "react-native";
 import { Image, useImage } from "expo-image";
+import { StyleSheet, Text, View } from "react-native";
 
-import { Player } from "@/src/dtos/players";
-import { ButtonIcon } from "../buttonIcon";
-import { userBullets } from "../shot";
+import { PublicPlayer } from "@/src/dtos/gameState";
 import { Dispatch } from "react";
+import { ButtonIcon } from "../buttonIcon";
+import { userBullets } from "../shotComponent";
 
 type ShootProps = {
-    player: Player;
+    player: PublicPlayer;
     bulletTotal: number;
     userBullets: userBullets[];
     setUser: Dispatch<React.SetStateAction<userBullets[]>>;
@@ -19,22 +19,19 @@ export default function CardShoot({
     bulletTotal,
     setUser,
 }: ShootProps) {
-    const image = useImage(player.character?.avatar as string, {
+    const avatarUrl = player.character?.avatar ?? "";
+    const image = useImage(avatarUrl, {
         maxWidth: 800,
         onError(error) {
             console.error("Loading failed:", error.message);
         },
     });
 
-    if (!image) {
-        return <Text>Image is loading...</Text>;
-    }
-
     const user = userBullets.find((u) => u.user_name === player.user_name);
     const totalShot = userBullets.map((u) => u.shots);
     const sumTotalShot = totalShot.reduce(
         (accumulator, currentValue) => accumulator + currentValue,
-        0
+        0,
     );
 
     return (
@@ -43,27 +40,39 @@ export default function CardShoot({
                 styles.parentItem,
                 {
                     backgroundColor:
-                        player.identity === "Xerife" ? "yellow" : "white",
+                        player.revealed_identity === "Xerife"
+                            ? "yellow"
+                            : "white",
                 },
             ]}
         >
             <View>
-                {player.character?.avatar && (
+                {avatarUrl && image ? (
                     <Image
                         style={styles.image}
                         source={image}
                         contentFit="cover"
                         transition={1000}
                     />
+                ) : (
+                    <View style={[styles.image, styles.placeholderImage]}>
+                        <Text style={styles.placeholderText}>
+                            {player.user_name.charAt(0).toUpperCase()}
+                        </Text>
+                    </View>
                 )}
             </View>
             <View style={styles.player}>
                 <View style={{ width: 180 }}>
                     <Text style={styles.parentTitle}>
-                        {player.user_name} - {player.identity}
+                        {player.user_name}
+                        {player.revealed_identity === "Xerife"
+                            ? " - Xerife"
+                            : ""}
                     </Text>
                     <Text style={styles.character}>
-                        {player.character?.character} - {player.bullet}
+                        {player.character?.character ?? "Carregando..."} -{" "}
+                        {player.bullet}
                     </Text>
                 </View>
                 <View
@@ -146,6 +155,17 @@ const styles = StyleSheet.create({
         height: 60,
         width: 60,
         backgroundColor: "#0553",
+    },
+    placeholderImage: {
+        backgroundColor: "#e0e0e0",
+        borderRadius: 8,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    placeholderText: {
+        fontSize: 24,
+        fontWeight: "bold",
+        color: "#666",
     },
     player: {
         width: "100%",

@@ -1,17 +1,16 @@
 import { View, Text, StyleSheet, FlatList } from "react-native";
 import CardShoot from "../../cardShoot";
-import { Player } from "@/src/dtos/players";
+import { PublicPlayer } from "@/src/dtos/gameState";
 import { userBullets } from "..";
 import { Dispatch } from "react";
 
 interface ListShootsProps {
     distance: number;
     bulletTotal: number;
-    playersOptions: Player[];
+    playersOptions: PublicPlayer[];
     userBullets: userBullets[];
     setUser: Dispatch<React.SetStateAction<userBullets[]>>;
 }
-
 export default function ListShoots({
     distance,
     bulletTotal,

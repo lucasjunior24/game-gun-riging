@@ -1,83 +1,96 @@
-import React, { useEffect, useState } from "react";
-import { View, FlatList, StyleSheet } from "react-native";
-import { useLocalSearchParams } from "expo-router";
-import { create_players } from "@/src/game/init_game";
-import Dices from "@/src/components/dices";
-import { Player } from "@/src/dtos/players";
-import { Team } from "@/src/dtos/characters";
-import CardPlayer from "@/src/components/cardPlayer";
 import ChampionModal from "@/src/components/alerts/champion";
+import CardPlayer from "@/src/components/cardPlayer";
+import Dices from "@/src/components/dices";
+import { GameStateDTO } from "@/src/dtos/gameState";
+import React, { useCallback, useEffect, useState } from "react";
+import { FlatList, StyleSheet, View } from "react-native";
 
-import { is_the_champion } from "@/src/consts/champion";
-import { GameStatus } from "@/src/dtos/game_match";
+import { createGame } from "@/src/api/game";
 
-// import CircularList from "./components/circularList";
-
-export default function BargMatch() {
-    const { game_id } = useLocalSearchParams();
-    const players = create_players();
-    const [gameStatus, setGameStatus] = useState<GameStatus>("Running");
-    const [livePlayers, setLivePlayers] = useState<Player[]>(players);
-
-    function handleSetPlayers(players: Player[]) {
-        setLivePlayers(players);
-    }
-
-    const [playerMoment, setPlayerMoment] = useState(players.length - 1);
-    const [teamChampion, setTeamChampion] = useState<Team | undefined>(
-        undefined
-    );
-    const [playerName, setPlayerName] = useState(
-        players[players.length - 1].user_name
-    );
-    function handlePlayerMoment(user_id: number, user_name: string) {
-        setPlayerMoment(user_id);
-        setPlayerName(user_name);
-    }
-
+export default function BangMatch() {
+    const [gameState, setGameState] = useState<GameStateDTO | null>(null);
+    const [gameID, setGameID] = useState<string | null>(null);
     const [openModal, setOpenModal] = useState(false);
 
-    useEffect(() => {
-        if (livePlayers.length) {
-            setTeamChampion(is_the_champion(livePlayers));
-        }
-    }, [livePlayers]);
+    console.log("game_id", gameID);
+    console.log("gameState", gameState);
+    // Criar partida via POST /games usando a nova API
 
+    async function initializeGame() {
+        try {
+            const state = await createGame({
+                player_name: "Lucas",
+                players_total: 5,
+            });
+            console.log("state", state);
+            if (state) {
+                setGameState(state);
+                setGameID(state.game_id);
+            }
+        } catch (error) {
+            console.error("Erro ao criar partida:", error);
+        }
+    }
+    const initializeGameRun = useCallback(() => {
+        initializeGame();
+    }, []);
     useEffect(() => {
-        if (teamChampion) {
-            setGameStatus("Done");
+        initializeGameRun();
+    }, [initializeGameRun]);
+
+    // Atualizar estado a cada ação
+    const handleStateUpdate = (newState: GameStateDTO) => {
+        setGameState(newState);
+    };
+
+    // Verificar se o jogo acabou
+    useEffect(() => {
+        if (gameState?.status === "Done" && gameState?.winner) {
             setOpenModal(true);
         }
-    }, [teamChampion]);
+    }, [gameState?.status, gameState?.winner]);
+
+    if (!gameState) {
+        return (
+            <View style={styles.container}>
+                <CardPlayer
+                    player={{
+                        user_id: 0,
+                        user_name: "Carregando...",
+                        position: 0,
+                        is_alive: true,
+                        is_bot: false,
+                        arrow: 0,
+                        bullet: 0,
+                    }}
+                    playerMoment={-1}
+                    index={-1}
+                />
+            </View>
+        );
+    }
+
+    const { status, players, current_player_index, winner } = gameState;
 
     return (
         <View style={styles.container}>
             <FlatList
-                data={livePlayers}
+                data={players}
                 renderItem={({ index, item }) => (
                     <CardPlayer
                         player={item}
-                        playerMoment={playerMoment}
+                        playerMoment={current_player_index}
                         index={index}
                     />
                 )}
                 keyExtractor={(item, index) => String(index)}
             />
-            {/* <CircularList /> */}
-            <Dices
-                handleSetPlayers={handleSetPlayers}
-                players={livePlayers}
-                setPlayerMoment={handlePlayerMoment}
-                playerMoment={playerMoment}
-                playerName={playerName}
-                gameId={String(game_id)}
-                gameStatus={gameStatus}
-            />
-            {teamChampion && (
+            <Dices gameState={gameState} onStateUpdate={handleStateUpdate} />
+            {status === "Done" && winner && (
                 <ChampionModal
                     isVisible={openModal}
                     onClose={() => setOpenModal(!openModal)}
-                    teamChampion={teamChampion}
+                    teamChampion={winner}
                 />
             )}
         </View>

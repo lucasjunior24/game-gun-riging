@@ -1,3 +1,7 @@
+/**
+ * @deprecated A rolagem de dados agora é feita pelo backend via POST /games/{game_id}/dice/roll.
+ * Usar rollDice() de api/game.ts em vez de play_dice() local.
+ */
 import { DiceCombination, DiceCombinationUndefined, DICES } from "../dtos/dice";
 
 function get_random_dice(): number {
@@ -23,7 +27,7 @@ export function block_dinamite(dice: DiceCombination) {
 }
 
 export function locked_dice(
-    state: DiceCombinationUndefined
+    state: DiceCombinationUndefined,
 ): DiceCombinationUndefined {
     if (state) {
         return { ...state, locked: !state.locked };
@@ -36,7 +40,7 @@ export function sum_shots(
     diceTwo: DiceCombinationUndefined,
     diceTree: DiceCombinationUndefined,
     diceFour: DiceCombinationUndefined,
-    diceFive: DiceCombinationUndefined
+    diceFive: DiceCombinationUndefined,
 ): DiceCombination[] {
     const dices: DiceCombination[] = [];
     if (diceOne?.show === "1" || diceOne?.show === "2") {

@@ -1,5 +1,3 @@
-import { Player } from "@/src/dtos/players";
-import { players_to_shot } from "@/src/game/shoot";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import {
     PropsWithChildren,
@@ -12,52 +10,17 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ButtonBase } from "../buttonBase";
 
-import { DiceCombinationUndefined, ExecuteDicesDTO } from "@/src/dtos/dice";
-
-import { executeDicesFetch } from "@/src/api/dices";
-import { GameStatus } from "@/src/dtos/game_match";
+import { executeShots, executeBotTurn } from "@/src/api/game";
+import { GameStateDTO, UserBulletsDTO } from "@/src/dtos/gameState";
 import { sleep } from "@/src/utils/sleep";
 import ListShots from "./listShots";
 
-// import { createPlayer } from "@/src/api/player";
-
-function executeShotInPlayers(new_players: Player[], user: userBullets) {
-    const players = new_players.map((p) => {
-        if (p.user_name === user.user_name && p.bullet) {
-            p.bullet -= user.shots;
-            if (p.bullet < 1) {
-                p.is_alive = false;
-            }
-            return p;
-        }
-        return p;
-    });
-    return players;
-}
-function checkPlayersIsLive(new_players: Player[]) {
-    const players = new_players
-        .map((p) => {
-            if (p.is_alive === false) {
-                return undefined;
-            }
-            return p;
-        })
-        .filter((p) => p !== undefined);
-    return players;
-}
 type ShootProps = PropsWithChildren<{
     isVisible: boolean;
-    playerMoment: number;
-    gameId: string;
-    playerName: string;
-    gameStatus: GameStatus;
-    players: Player[];
-    currentPlayer: Player;
-    shots: DiceCombinationUndefined[];
+    gameState: GameStateDTO;
     onClose: () => void;
-    finishPlayer: () => void;
-    handleSetPlayers(players: Player[]): void;
-    handleSetPlayer(playerMoment: number, new_players: Player[]): void;
+    onStateUpdate: (newState: GameStateDTO) => void;
+    onFinishPlayer: () => void;
 }>;
 
 export interface userBullets {
@@ -67,154 +30,76 @@ export interface userBullets {
 
 export default function ShotComponent({
     isVisible,
-    gameId,
-    playerMoment,
-    players,
-    currentPlayer,
-    shots,
-    gameStatus,
-    playerName,
+    gameState,
     onClose,
-    finishPlayer,
-    handleSetPlayers,
-    handleSetPlayer,
+    onStateUpdate,
+    onFinishPlayer,
 }: ShootProps) {
-    const livePlayers = players;
+    const players = gameState.players;
+    const currentPlayer = gameState.current_player;
 
-    const optionsOneShoot = players_to_shot(
-        playerMoment + 1,
-        livePlayers.length,
-        1,
-    );
-
-    const optionsTwoShoot = players_to_shot(
-        playerMoment + 1,
-        livePlayers.length,
-        livePlayers.length === 2 ? 1 : 2,
-    );
-
+    // Calcular alvos usando is_alive e user_id (não identidades!)
     const playersOneShot = useMemo(() => {
-        return optionsOneShoot
-            .map((index) => livePlayers.find((user, i) => i === index))
-            .filter((p) => p !== undefined)
-            .filter((p) => p.user_name !== playerName);
-    }, [livePlayers, optionsOneShoot, playerName]);
-
-    // console.log(
-    //   playersOneShot.map((p) => {
-    //     return p.user_name;
-    //   })
-    // );
+        return players.filter(
+            (p) => p.is_alive && p.user_id !== currentPlayer.user_id,
+        );
+    }, [players, currentPlayer]);
 
     const playersTwoShot = useMemo(() => {
-        return optionsTwoShoot
-            .map((index) => livePlayers.find((user, i) => i === index))
-            .filter((p) => p !== undefined)
-            .filter((p) => p.user_name !== playerName);
-    }, [livePlayers, optionsTwoShoot, playerName]);
+        // Distância 2 são os mesmos alvos que distância 1 para simplificar
+        // Backend decide se há alvos válidos
+        return players.filter(
+            (p) => p.is_alive && p.user_id !== currentPlayer.user_id,
+        );
+    }, [players, currentPlayer]);
 
+    // Contar tiros disponíveis com base nos dados
     const oneShotTotal = useMemo(() => {
-        return shots.filter((s) => s?.show === "1").length;
-    }, [shots]);
+        return gameState.dice.filter((d) => d.show === "1").length;
+    }, [gameState.dice]);
 
     const twoShotTotal = useMemo(() => {
-        return shots.filter((s) => s?.show === "2").length;
-    }, [shots]);
+        return gameState.dice.filter((d) => d.show === "2").length;
+    }, [gameState.dice]);
 
     const [userOneBullets, setUserOneBullets] = useState<userBullets[]>([]);
     const [userTwoBullets, setUserTwoBullets] = useState<userBullets[]>([]);
 
-    const runExecution = useCallback(() => {
-        let players_updated: Player[] = players;
-        userOneBullets.forEach((user) => {
-            players_updated = executeShotInPlayers(players_updated, user);
+    // Executar tiros: envia comando ao backend, recebe novo estado
+    const runExecution = useCallback(async () => {
+        const userBulletsDTO: UserBulletsDTO[] = [
+            ...userOneBullets.map((u) => ({
+                user_name: u.user_name,
+                shots: u.shots,
+            })),
+            ...userTwoBullets.map((u) => ({
+                user_name: u.user_name,
+                shots: u.shots,
+            })),
+        ];
+
+        const newState = await executeShots(gameState.game_id, {
+            actor_user_id: currentPlayer.user_id,
+            shots_by_distance: [
+                {
+                    distance: "1",
+                    user_bullets: userBulletsDTO,
+                },
+            ],
         });
-
-        userTwoBullets.forEach((user) => {
-            players_updated = executeShotInPlayers(players_updated, user);
-        });
-
-        players_updated = checkPlayersIsLive(players_updated);
-        console.log(
-            players_updated.map(
-                (p) => `${p.user_name} - ${p.bullet} - ${p.is_alive}`,
-            ),
-        );
-
-        handleSetPlayers(players_updated);
-        const index = players_updated.findIndex(
-            (p) => p.user_name === playerName,
-        );
-        // console.log("index: ", index);
-        handleSetPlayer(index, players_updated);
-        setUserOneBullets([]);
-        setUserTwoBullets([]);
-        finishPlayer();
-    }, [
-        finishPlayer,
-        handleSetPlayer,
-        handleSetPlayers,
-        playerName,
-        players,
-        userOneBullets,
-        userTwoBullets,
-    ]);
-    const tableSituation = useMemo(() => {
-        let table_situation = "";
-        const total_players = `Atualmente o jogo tem ${players.length} Jogadores sendo eles:`;
-        players.forEach((p) => {
-            if (p.identity === "Xerife") {
-                table_situation += ` O jogador ${p.user_name} que tem ${p.bullet} vidas e é o Xerife.`;
-            } else {
-                table_situation += ` O jogador ${p.user_name} que tem ${p.bullet} vidas.`;
-            }
-        });
-        return total_players + table_situation;
-    }, [players]);
-
-    const botExecuteDices = useCallback(async () => {
-        const executionDTO: ExecuteDicesDTO = {
-            game_id: String(gameId),
-            current_player: currentPlayer,
-            table_situation: tableSituation,
-            current_identity: String(currentPlayer.identity),
-            one_distance: {
-                bullet_total: oneShotTotal,
-                players_options: playersOneShot,
-                user_bullets: userOneBullets,
-            },
-            two_distance: undefined,
-        };
-        if (twoShotTotal !== 0) {
-            executionDTO.two_distance = {
-                bullet_total: twoShotTotal,
-                players_options: playersTwoShot,
-                user_bullets: userTwoBullets,
-            };
-        }
-
-        // await createPlayer(currentPlayer);
-        const data = await executeDicesFetch(executionDTO);
-        if (data) {
-            if (data.one_distance.user_bullets) {
-                await sleep(2);
-                setUserOneBullets(data.one_distance.user_bullets);
-            }
-            if (data.two_distance?.user_bullets) {
-                await sleep(2);
-                setUserTwoBullets(data.two_distance.user_bullets);
-            }
+        if (newState) {
+            onStateUpdate(newState);
+            setUserOneBullets([]);
+            setUserTwoBullets([]);
+            onFinishPlayer();
         }
     }, [
-        currentPlayer,
-        gameId,
-        oneShotTotal,
-        playersOneShot,
-        playersTwoShot,
-        tableSituation,
-        twoShotTotal,
+        gameState.game_id,
+        currentPlayer.user_id,
         userOneBullets,
         userTwoBullets,
+        onStateUpdate,
+        onFinishPlayer,
     ]);
 
     const runExecutionSleep = useCallback(async () => {
@@ -222,19 +107,24 @@ export default function ShotComponent({
         runExecution();
     }, [runExecution]);
 
-    console.log(gameStatus);
+    // Turno do bot: chama endpoint dedicado
     useEffect(() => {
         if (
-            gameStatus === "Running" &&
+            gameState.status === "Running" &&
             currentPlayer.is_bot &&
             isVisible &&
             userOneBullets.length === 0 &&
             userTwoBullets.length === 0
         ) {
-            botExecuteDices();
+            executeBotTurn(gameState.game_id).then((newState) => {
+                if (newState) {
+                    onStateUpdate(newState);
+                    onFinishPlayer();
+                }
+            });
         }
         if (
-            gameStatus === "Running" &&
+            gameState.status === "Running" &&
             (userOneBullets.length || userTwoBullets.length)
         ) {
             runExecutionSleep();
@@ -242,11 +132,13 @@ export default function ShotComponent({
     }, [
         currentPlayer.is_bot,
         currentPlayer.user_name,
-        gameStatus,
+        gameState.status,
         isVisible,
         userOneBullets.length,
         userTwoBullets.length,
-        botExecuteDices,
+        gameState.game_id,
+        onStateUpdate,
+        onFinishPlayer,
         runExecutionSleep,
     ]);
 
@@ -280,7 +172,7 @@ export default function ShotComponent({
                     />
                     {twoShotTotal !== 0 && (
                         <ListShots
-                            distance={livePlayers.length > 3 ? 2 : 1}
+                            distance={players.length > 3 ? 2 : 1}
                             bulletTotal={twoShotTotal}
                             playersOptions={playersTwoShot}
                             setUser={setUserTwoBullets}

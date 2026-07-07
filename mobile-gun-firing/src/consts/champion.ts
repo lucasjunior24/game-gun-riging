@@ -1,3 +1,7 @@
+/**
+ * @deprecated O cálculo de campeão agora é feito pelo backend.
+ * O campo winner vem no GameStateDTO. Remover após migração completa.
+ */
 import { Team } from "../dtos/characters";
 import { Player } from "../dtos/players";
 

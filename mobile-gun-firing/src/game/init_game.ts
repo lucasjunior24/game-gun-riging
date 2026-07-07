@@ -1,3 +1,8 @@
+/**
+ * @deprecated Este arquivo foi substituído pela API do backend.
+ * A criação de jogadores, identidades e times agora é feita pelo backend via POST /games.
+ * Usar GameStateDTO de gameState.ts em vez de create_players().
+ */
 import { characters } from "../consts/characters";
 import { Identity, Team } from "../dtos/characters";
 import { Player } from "../dtos/players";
@@ -60,7 +65,7 @@ export function get_users_ids(): number[] {
 
 export function pass_player(
     player_moment: number,
-    players_size: number
+    players_size: number,
 ): number {
     let result = 0;
     if (players_size - 1 === player_moment) {
