@@ -10,8 +10,8 @@ import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { ButtonBase } from "../buttonBase";
 
-import { executeShots, executeBotTurn } from "@/src/api/game";
-import { GameStateDTO, UserBulletsDTO } from "@/src/dtos/gameState";
+import { executeBotTurn, executeShots } from "@/src/api/game";
+import { GameStateDTO } from "@/src/dtos/gameState";
 import { sleep } from "@/src/utils/sleep";
 import ListShots from "./listShots";
 
@@ -67,23 +67,24 @@ export default function ShotComponent({
 
     // Executar tiros: envia comando ao backend, recebe novo estado
     const runExecution = useCallback(async () => {
-        const userBulletsDTO: UserBulletsDTO[] = [
-            ...userOneBullets.map((u) => ({
-                user_name: u.user_name,
-                shots: u.shots,
-            })),
-            ...userTwoBullets.map((u) => ({
-                user_name: u.user_name,
-                shots: u.shots,
-            })),
-        ];
+        await sleep(4);
 
         const newState = await executeShots(gameState.game_id, {
             actor_user_id: currentPlayer.user_id,
             shots_by_distance: [
                 {
                     distance: "1",
-                    user_bullets: userBulletsDTO,
+                    user_bullets: userOneBullets.map((u) => ({
+                        user_name: u.user_name,
+                        shots: u.shots,
+                    })),
+                },
+                {
+                    distance: "2",
+                    user_bullets: userTwoBullets.map((u) => ({
+                        user_name: u.user_name,
+                        shots: u.shots,
+                    })),
                 },
             ],
         });
@@ -125,6 +126,8 @@ export default function ShotComponent({
         }
         if (
             gameState.status === "Running" &&
+            currentPlayer.is_bot &&
+            isVisible &&
             (userOneBullets.length || userTwoBullets.length)
         ) {
             runExecutionSleep();

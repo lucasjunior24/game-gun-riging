@@ -30,27 +30,29 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
     const currentPlayer = gameState.current_player;
 
     // Retorna os índices dos dados que são Dinamite (valor 3)
-
+    // console.log("lockedDiceIndexes: ", lockedDiceIndexes);
+    console.log(
+        "gameState.dice: ",
+        currentPlayer.is_bot,
+        currentPlayer.user_name,
+    );
     const playAllDices = useCallback(async () => {
-        // Sempre inclui os dados de Dinamite como travados
-
         const command: RollDiceCommandDTO = {
             locked_dice_indexes: lockedDiceIndexes,
         };
-        console.log("lockedDiceIndexes: ", lockedDiceIndexes);
+
         const newState = await rollDice(gameState.game_id, command);
+        await sleep(2);
         if (newState) {
             onStateUpdate(newState);
-            if (newState.dice.some((d) => d.dice === 3)) {
-                setLockedDiceIndexes((prev) => [
-                    ...newState.dice.filter((d) => d.dice === 3),
-                ]);
-            }
+            setLockedDiceIndexes(
+                newState.dice.sort((a, b) => a.index - b.index),
+            );
         }
         setTotalDiceRolls((state) => state + 1);
     }, [gameState.game_id, lockedDiceIndexes, onStateUpdate]);
 
-    function exeDices() {
+    function handleOpenModal() {
         setOpenModal(true);
     }
 
@@ -58,42 +60,61 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
         setOpenModal(false);
     }
 
-    function finishPlayer() {
+    const finishPlayer = useCallback(() => {
         setOpenModal(false);
         clearDices();
-    }
+    }, []);
+
+    const runBotTurn = useCallback(
+        async (game_id: string) => {
+            const newState = await executeBotTurn(game_id);
+            if (!newState) {
+                console.error("Erro ao executar turno do bot");
+                return;
+            }
+            await sleep(3);
+            onStateUpdate(newState);
+            finishPlayer();
+        },
+        [finishPlayer, onStateUpdate],
+    );
 
     const toggleLockDice = (index: number) => {
-        setLockedDiceIndexes((prev) => [
-            ...prev.filter((_, i) => i !== index),
-            {
-                dice: gameState.dice[index].dice,
-                locked: !gameState.dice[index].locked,
-                show: gameState.dice[index].show,
-                index: index,
-            },
-        ]);
+        setLockedDiceIndexes((prev) => {
+            const newLockedDice = gameState.dice.find((d) => d.index === index);
+            if (newLockedDice === undefined) {
+                return prev;
+            }
+            const dices = [
+                ...prev.filter((d) => d.index !== index),
+                {
+                    dice: newLockedDice.dice,
+                    locked: !newLockedDice.locked,
+                    show: newLockedDice.show,
+                    index: index,
+                },
+            ];
+            return dices.sort((a, b) => a.index - b.index);
+        });
     };
 
     // Turno do bot: executa rolagens e tiros automaticamente
     const botPlayAllDices = useCallback(async () => {
-        if (!currentPlayer.is_bot) return;
-
         await sleep(3);
         if (totalDiceRolls < 3) {
             await playAllDices();
         }
         if (totalDiceRolls === 2) {
             await sleep(3);
-            exeDices();
+            setOpenModal(true);
         }
-    }, [playAllDices, currentPlayer.is_bot, totalDiceRolls]);
+    }, [playAllDices, totalDiceRolls]);
 
     useEffect(() => {
-        if (gameState.status === "Running") {
+        if (gameState.status === "Running" && currentPlayer.is_bot) {
             botPlayAllDices();
         }
-    }, [botPlayAllDices, gameState.status]);
+    }, [botPlayAllDices, currentPlayer.is_bot, gameState.status]);
 
     // Bot turn: chama endpoint dedicado quando visível e é bot
     useEffect(() => {
@@ -102,9 +123,7 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
             currentPlayer.is_bot &&
             openModal
         ) {
-            executeBotTurn(gameState.game_id).then((newState) => {
-                if (newState) onStateUpdate(newState);
-            });
+            runBotTurn(gameState.game_id);
         }
     }, [
         currentPlayer.is_bot,
@@ -112,6 +131,8 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
         gameState.game_id,
         gameState.status,
         onStateUpdate,
+        finishPlayer,
+        runBotTurn,
     ]);
 
     return (
@@ -158,7 +179,7 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
                     </Text>
                     <View style={styles.card}>
                         <Pressable
-                            onPress={exeDices}
+                            onPress={handleOpenModal}
                             style={[
                                 styles.button,
                                 { backgroundColor: "green" },
@@ -170,11 +191,11 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
                 </View>
                 <View style={styles.card}>
                     <Text style={styles.parentTitle}>Dados</Text>
-                    {gameState.dice.map((d, i) => (
+                    {lockedDiceIndexes.map((d, i) => (
                         <DiceItem
                             key={i}
                             dice={d}
-                            handleDice={() => toggleLockDice(i)}
+                            handleDice={() => toggleLockDice(d.index)}
                         />
                     ))}
                 </View>
