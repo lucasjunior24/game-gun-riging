@@ -1,5 +1,9 @@
 import { executeBotTurn, finishTurn, rollDice } from "@/src/api/game";
-import { GameStateDTO, RollDiceCommandDTO } from "@/src/dtos/gameState";
+import {
+    DiceShowDTO,
+    GameStateDTO,
+    RollDiceCommandDTO,
+} from "@/src/dtos/gameState";
 import { sleep } from "@/src/utils/sleep";
 import React, { useCallback, useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -12,7 +16,9 @@ interface DicesProps {
 }
 
 const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
-    const [lockedDiceIndexes, setLockedDiceIndexes] = useState<number[]>([]);
+    const [lockedDiceIndexes, setLockedDiceIndexes] = useState<DiceShowDTO[]>(
+        [],
+    );
     const [openModal, setOpenModal] = useState(false);
     const [totalDiceRolls, setTotalDiceRolls] = useState(0);
 
@@ -23,13 +29,23 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
 
     const currentPlayer = gameState.current_player;
 
+    // Retorna os índices dos dados que são Dinamite (valor 3)
+
     const playAllDices = useCallback(async () => {
+        // Sempre inclui os dados de Dinamite como travados
+
         const command: RollDiceCommandDTO = {
             locked_dice_indexes: lockedDiceIndexes,
         };
+        console.log("lockedDiceIndexes: ", lockedDiceIndexes);
         const newState = await rollDice(gameState.game_id, command);
         if (newState) {
             onStateUpdate(newState);
+            if (newState.dice.some((d) => d.dice === 3)) {
+                setLockedDiceIndexes((prev) => [
+                    ...newState.dice.filter((d) => d.dice === 3),
+                ]);
+            }
         }
         setTotalDiceRolls((state) => state + 1);
     }, [gameState.game_id, lockedDiceIndexes, onStateUpdate]);
@@ -48,11 +64,15 @@ const DicesComponent = ({ gameState, onStateUpdate }: DicesProps) => {
     }
 
     const toggleLockDice = (index: number) => {
-        setLockedDiceIndexes((prev) =>
-            prev.includes(index)
-                ? prev.filter((i) => i !== index)
-                : [...prev, index],
-        );
+        setLockedDiceIndexes((prev) => [
+            ...prev.filter((_, i) => i !== index),
+            {
+                dice: gameState.dice[index].dice,
+                locked: !gameState.dice[index].locked,
+                show: gameState.dice[index].show,
+                index: index,
+            },
+        ]);
     };
 
     // Turno do bot: executa rolagens e tiros automaticamente

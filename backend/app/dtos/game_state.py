@@ -60,7 +60,7 @@ class FinishTurnCommandDTO(BaseDTO):
 
 
 class RollDiceCommandDTO(BaseDTO):
-    locked_dice_indexes: list[int] = Field(default_factory=list)
+    locked_dice_indexes: list[DiceShowDTO] = Field(default_factory=list)
 
 
 class BotTurnResultDTO(BaseDTO):

@@ -26,6 +26,7 @@ export type Team = Exclude<Identity, "Assistente">;
 // Dados mostrados em cada face de dado
 export type DiceShowDTO = {
     dice: number;
+    index: number;
     locked: boolean;
     show: string;
 };
@@ -46,7 +47,7 @@ export type GameStateDTO = {
 
 // Comandos que o frontend envia ao backend
 export type RollDiceCommandDTO = {
-    locked_dice_indexes: number[];
+    locked_dice_indexes: DiceShowDTO[];
 };
 
 export type ShootDistanceCommandDTO = {

@@ -13,6 +13,7 @@ class DiceDTO(BaseDTO):
 
 class DiceShowDTO(BaseDTO):
     dice: int = Field(default=0)
+    index: int = Field(default=0)
     locked: bool = Field(default=False)
     show: str = Field(default="")
 

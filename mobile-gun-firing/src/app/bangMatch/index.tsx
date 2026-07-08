@@ -3,7 +3,7 @@ import CardPlayer from "@/src/components/cardPlayer";
 import Dices from "@/src/components/dices";
 import { GameStateDTO } from "@/src/dtos/gameState";
 import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, StyleSheet, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 
 import { createGame } from "@/src/api/game";
 
@@ -13,7 +13,6 @@ export default function BangMatch() {
     const [openModal, setOpenModal] = useState(false);
 
     console.log("game_id", gameID);
-    console.log("gameState", gameState);
     // Criar partida via POST /games usando a nova API
 
     async function initializeGame() {
@@ -22,7 +21,6 @@ export default function BangMatch() {
                 player_name: "Lucas",
                 players_total: 5,
             });
-            console.log("state", state);
             if (state) {
                 setGameState(state);
                 setGameID(state.game_id);
@@ -53,19 +51,7 @@ export default function BangMatch() {
     if (!gameState) {
         return (
             <View style={styles.container}>
-                <CardPlayer
-                    player={{
-                        user_id: 0,
-                        user_name: "Carregando...",
-                        position: 0,
-                        is_alive: true,
-                        is_bot: false,
-                        arrow: 0,
-                        bullet: 0,
-                    }}
-                    playerMoment={-1}
-                    index={-1}
-                />
+                <Text>Carregando partida...</Text>
             </View>
         );
     }

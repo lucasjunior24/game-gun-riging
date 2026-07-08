@@ -1,11 +1,11 @@
-import { api } from "./axios";
-import { ResponseDTO } from "../dtos/response";
 import {
-    GameStateDTO,
     CreateGameDTO,
-    RollDiceCommandDTO,
     ExecuteShotsCommandDTO,
+    GameStateDTO,
+    RollDiceCommandDTO,
 } from "../dtos/gameState";
+import { ResponseDTO } from "../dtos/response";
+import { api } from "./axios";
 
 // POST /games - Criar nova partida
 export async function createGame(
@@ -16,7 +16,6 @@ export async function createGame(
             "/games",
             command,
         );
-        console.log("response.data", response.data);
         return response.data.data;
     } catch (error) {
         console.error("Erro ao criar partida:", error);
