@@ -12,6 +12,8 @@ class ActionTypeDTO(Enum):
     GATLING = "GATLING"
     CERVEJA = "CERVEJA"
     INDIOS = "INDIOS"
+    DINAMITE = "DINAMITE"
+    MORTE = "MORTE"
 
 
 class GameActionHistoryDTO(BaseDTO):

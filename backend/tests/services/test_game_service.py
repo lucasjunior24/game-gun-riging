@@ -5,7 +5,11 @@ from app.dtos.game_state import (
     ShootDistanceCommandDTO,
 )
 from app.dtos.dice import UserBulletsDTO
+from app.engine.dice import DiceFace
 from app.services.game_service import GameService
+from app.services.history_adapter import events_to_history
+
+from conftest import force_dice
 
 
 def test_public_state_does_not_expose_private_identity_or_belief():
@@ -25,6 +29,11 @@ def test_execute_shots_updates_life_history_and_turn():
     state = service.create_game(CreateAuthoritativeGameDTO(player_name="Lucas"))
     target = state.players[1]
 
+    force_dice(
+        service,
+        state.game_id,
+        [DiceFace.SHOT_1, DiceFace.SHOT_1, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW],
+    )
     updated = service.execute_shots(
         state.game_id,
         ExecuteShotsCommandDTO(
@@ -44,20 +53,27 @@ def test_execute_shots_updates_life_history_and_turn():
     internal_state = service._games[state.game_id]
 
     assert updated_target.bullet == target.bullet - 2
-    assert internal_state.action_history[0].actor_user_name == "Lucas"
-    assert internal_state.action_history[0].target_user_name == target.user_name
+    history = events_to_history(internal_state)
+    shot_events = [a for a in history if a.action_type == "TIRO"]
+    assert any(a.target_user_name == target.user_name for a in shot_events)
     assert updated.turn_number == 2
 
 
-def test_history_updates_belief_inside_backend_only():
+def test_history_does_not_leak_hidden_identities():
     service = GameService()
     state = service.create_game(CreateAuthoritativeGameDTO(player_name="Lucas"))
-    outlaw = state.players[1]
+    outlaw_seat = state.players[1].user_name
 
+    service._games[state.game_id].turn.seat = 1  # e a vez do jogador 1
+    force_dice(
+        service,
+        state.game_id,
+        [DiceFace.SHOT_1, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW],
+    )
     service.execute_shots(
         state.game_id,
         ExecuteShotsCommandDTO(
-            actor_user_id=outlaw.user_id,
+            actor_user_id=state.players[1].user_id,
             shots_by_distance=[
                 ShootDistanceCommandDTO(
                     distance="1",
@@ -68,38 +84,45 @@ def test_history_updates_belief_inside_backend_only():
     )
 
     internal_state = service._games[state.game_id]
-    internal_outlaw = next(
-        player
-        for player in internal_state.players
-        if player.user_name == outlaw.user_name
-    )
+    history = events_to_history(internal_state)
+    shot = next(a for a in history if a.actor_user_name == outlaw_seat)
+
+    # O atirador (papel oculto) nao aparece com identidade no historico.
+    assert shot.actor_identity is None
+    # O alvo e o Xerife, que e sempre publico.
+    assert shot.target_identity == IdentityDTO.XERIFE.value
+
     public_outlaw = next(
         player
         for player in service.get_state(state.game_id).players
-        if player.user_name == outlaw.user_name
+        if player.user_name == outlaw_seat
     )
-
-    assert (
-        internal_outlaw.papel_probability.fora_da_lei
-        > internal_outlaw.papel_probability.assistente
-    )
-    assert internal_outlaw.papel_probability.xerife == 0
     assert not hasattr(public_outlaw, "papel_probability")
 
 
 def test_winner_is_resolved_when_sheriff_dies():
     service = GameService()
     state = service.create_game(CreateAuthoritativeGameDTO(player_name="Lucas"))
-    actor = state.players[1]
+    sheriff_seat = state.players[0].user_name
+    assert sheriff_seat == "Lucas"
 
+    internal_state = service._games[state.game_id]
+    internal_state.turn.seat = 1  # e a vez do jogador 1
+    internal_state.players[0].life = 1  # deixa o Xerife a um tiro da morte
+
+    force_dice(
+        service,
+        state.game_id,
+        [DiceFace.SHOT_1, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW],
+    )
     updated = service.execute_shots(
         state.game_id,
         ExecuteShotsCommandDTO(
-            actor_user_id=actor.user_id,
+            actor_user_id=state.players[1].user_id,
             shots_by_distance=[
                 ShootDistanceCommandDTO(
                     distance="1",
-                    user_bullets=[UserBulletsDTO(user_name="Lucas", shots=99)],
+                    user_bullets=[UserBulletsDTO(user_name="Lucas", shots=1)],
                 )
             ],
         ),

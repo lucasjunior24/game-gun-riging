@@ -1,12 +1,6 @@
-"""Testa que o historico melhora o papel_probability no backend."""
+"""Testa que o historico melhora o papel_probability no BeliefService."""
 
 from app.dtos.character import IdentityDTO
-from app.dtos.dice import UserBulletsDTO
-from app.dtos.game_state import (
-    CreateAuthoritativeGameDTO,
-    ExecuteShotsCommandDTO,
-    ShootDistanceCommandDTO,
-)
 from app.dtos.history import ActionTypeDTO, GameActionHistoryDTO
 from app.dtos.players import IdentityProbabilityDTO, PlayerDTO
 from app.services.belief_service import BeliefService
@@ -157,36 +151,3 @@ def test_hidden_player_not_gains_sheriff_probability_when_sheriff_known():
 
     assert actor.papel_probability.xerife == 0.0
     assert target.papel_probability.xerife == 0.0
-
-
-def test_belief_service_updates_players_from_game_service_history():
-    from app.services.game_service import GameService
-
-    service = GameService()
-    state = service.create_game(
-        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
-    )
-
-    outlaw = state.players[1]
-
-    service.execute_shots(
-        state.game_id,
-        ExecuteShotsCommandDTO(
-            actor_user_id=outlaw.user_id,
-            shots_by_distance=[
-                ShootDistanceCommandDTO(
-                    distance="1",
-                    user_bullets=[UserBulletsDTO(user_name="Lucas", shots=1)],
-                )
-            ],
-        ),
-    )
-
-    internal_state = service._games[state.game_id]
-    internal_outlaw = next(
-        p for p in internal_state.players if p.user_name == outlaw.user_name
-    )
-
-    assert internal_outlaw.papel_probability.fora_da_lei > 1.0 / 3.0
-    assert internal_outlaw.papel_probability.xerife == 0.0
-    assert abs(internal_outlaw.papel_probability.total() - 1.0) < 0.001

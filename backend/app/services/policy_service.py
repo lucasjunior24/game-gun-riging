@@ -1,11 +1,13 @@
 from pathlib import Path
 import torch
 
-from app.dtos.character import IdentityDTO
+from app.dtos.character import CharacterDTO, IdentityDTO
 from app.dtos.dice import ExecuteDicesDTO, ExecuteDistanceDTO, UserBulletsDTO
-from app.dtos.players import PlayerDTO
+from app.dtos.players import IdentityProbabilityDTO, PlayerDTO
 from app.dtos.policy import ShotPolicyDecisionDTO, ShotPolicyPredictionDTO
+from app.engine.state import EngineState
 from app.services.belief_service import BeliefService
+from app.services.history_adapter import events_to_history
 
 
 class ShotPolicyTargetNet(torch.nn.Module):
@@ -198,7 +200,7 @@ class ShotPolicyService:
                 for identity in IdentityDTO
             )
 
-        life_score = max(0.0, min(1.0, (3.0 - float(candidate.bullet)) / 3.0))
+        life_score = 1.0 - candidate.bullet / max(1, candidate.max_bullet)
         arrow_score = max(0.0, min(1.0, float(candidate.arrow) / 3.0))
         distance_score = 1.0 if distance_label == "1" else 0.6
         available_shots_score = max(0.0, min(1.0, float(distance.bullet_total) / 3.0))
@@ -367,3 +369,66 @@ class ShotPolicyService:
         if value is None:
             return False
         return self.belief_service.coerce_identity(value) == identity
+
+    # ---------- ponte com o motor (provisoria, ate a Fase 4) ----------
+
+    def rank_targets(
+        self, state: EngineState, seat: int, candidates: list[int]
+    ) -> list[int]:
+        """Ordena alvos ja validados pelo motor, do melhor para o pior."""
+        execution = self._execution_from_engine(state, seat, candidates)
+        scored = [
+            (
+                self._score_candidate_by_belief(execution, execution.one_distance, "1", candidate),
+                candidate,
+            )
+            for candidate in execution.one_distance.players_options
+        ]
+        by_name = {state.players[s].user_name: s for s in candidates}
+        return [by_name[p.user_name] for _, p in sorted(scored, key=lambda item: item[0], reverse=True)]
+
+    def _execution_from_engine(
+        self, state: EngineState, seat: int, candidates: list[int]
+    ) -> ExecuteDicesDTO:
+        current = state.players[seat]
+        sheriff = next((p for p in state.players if p.identity is IdentityDTO.XERIFE), None)
+        sheriff_user_name = sheriff.user_name if sheriff else None
+
+        execution = ExecuteDicesDTO(
+            game_id=state.game_id,
+            current_player=self._player_dto_from_engine(current, sheriff_user_name),
+            current_identity=current.identity.value,
+            table_situation=f"round_{state.round_number}_turn_{state.turn_number}",
+            one_distance=ExecuteDistanceDTO(
+                bullet_total=max(1, len(candidates)),
+                players_options=[
+                    self._player_dto_from_engine(state.players[s], sheriff_user_name)
+                    for s in candidates
+                ],
+            ),
+            two_distance=None,
+            action_history=events_to_history(state),
+        )
+        self._update_beliefs_from_action_history(execution)
+        return execution
+
+    def _player_dto_from_engine(self, player, sheriff_user_name: str | None) -> PlayerDTO:
+        dto = PlayerDTO(
+            user_id=player.user_id,
+            user_name=player.user_name,
+            position=player.seat + 1,
+            is_alive=player.is_alive,
+            is_bot=player.is_bot,
+            arrow=player.arrows,
+            bullet=player.life,
+            max_bullet=player.max_life,
+            character=CharacterDTO(
+                initial_bullet=player.max_life, power=player.power, character=player.character
+            ),
+        )
+        dto.papel_probability = (
+            IdentityProbabilityDTO.revealed_sheriff()
+            if player.public_identity is IdentityDTO.XERIFE
+            else IdentityProbabilityDTO.neutral_hidden()
+        )
+        return dto

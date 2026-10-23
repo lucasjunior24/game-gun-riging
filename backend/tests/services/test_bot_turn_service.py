@@ -9,7 +9,10 @@ from app.dtos.game_state import (
     ExecuteShotsCommandDTO,
     ShootDistanceCommandDTO,
 )
+from app.engine.dice import DiceFace
 from app.services.game_service import GameService
+
+from conftest import force_dice
 
 
 def test_bot_executes_turn_without_frontend_action_history():
@@ -35,7 +38,7 @@ def test_bot_turn_generates_history():
     service.execute_bot_turn(state.game_id)
 
     internal_state = service._games[state.game_id]
-    assert len(internal_state.action_history) > 0
+    assert len(internal_state.events) > 0
 
 
 def test_public_state_does_not_leak_beliefs_after_bot_turn():
@@ -55,16 +58,25 @@ def test_public_state_does_not_leak_beliefs_after_bot_turn():
 
 
 def test_bot_turn_uses_belief_service():
+    """A politica de tiro do bot usa a crenca construida a partir do historico do motor."""
+    from app.services.policy_service import ShotPolicyService
+
     service = GameService()
     state = service.create_game(
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    outlaw = state.players[1]
+    internal_state = service._games[state.game_id]
+    internal_state.turn.seat = 1  # jogador 1 ataca o Xerife, levantando suspeita de fora da lei
+    force_dice(
+        service,
+        state.game_id,
+        [DiceFace.SHOT_1, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW, DiceFace.ARROW],
+    )
     service.execute_shots(
         state.game_id,
         ExecuteShotsCommandDTO(
-            actor_user_id=outlaw.user_id,
+            actor_user_id=state.players[1].user_id,
             shots_by_distance=[
                 ShootDistanceCommandDTO(
                     distance="1",
@@ -74,13 +86,12 @@ def test_bot_turn_uses_belief_service():
         ),
     )
 
-    internal_state = service._games[state.game_id]
-    internal_outlaw = next(
-        p for p in internal_state.players if p.user_name == outlaw.user_name
-    )
+    policy = ShotPolicyService(model_path="missing-shot-policy-model.pt")
+    suspect_seat = 1
+    neutral_seat = 4
+    ranked = policy.rank_targets(internal_state, 0, [suspect_seat, neutral_seat])
 
-    assert internal_outlaw.papel_probability.fora_da_lei > 1.0 / 3.0
-    assert abs(internal_outlaw.papel_probability.total() - 1.0) < 0.001
+    assert ranked[0] == suspect_seat
 
 
 def test_turn_advances_after_bot_action():
