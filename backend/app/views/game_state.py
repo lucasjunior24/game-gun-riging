@@ -58,6 +58,8 @@ async def finish_turn(game_id: str, command: FinishTurnCommandDTO):
         state = game_service.finish_turn(game_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
     return ResponseDTO(data=state, message="success")
 
 
@@ -69,6 +71,8 @@ async def roll_dice(game_id: str, command: RollDiceCommandDTO):
         state = game_service.roll_dice(game_id, command)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error))
+    except ValueError as error:
+        raise HTTPException(status_code=400, detail=str(error))
     return ResponseDTO(data=state, message="success")
 
 

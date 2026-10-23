@@ -4,7 +4,6 @@ from pydantic import Field
 from app.dtos.base import BaseDTO
 from app.dtos.character import CharacterDTO, IdentityDTO, TeamDTO
 from app.dtos.dice import DiceShowDTO, UserBulletsDTO
-from app.dtos.players import IdentityProbabilityDTO
 
 
 class PublicPlayerDTO(BaseDTO):
@@ -16,15 +15,8 @@ class PublicPlayerDTO(BaseDTO):
     is_bot: bool = Field(default=True)
     arrow: int = Field(default=0)
     bullet: int = Field(default=0)
+    max_bullet: int = Field(default=0)
     revealed_identity: Optional[IdentityDTO] = Field(default=None)
-
-
-class InternalPlayerDTO(PublicPlayerDTO):
-    identity: IdentityDTO
-    team: TeamDTO
-    papel_probability: IdentityProbabilityDTO = Field(
-        default_factory=IdentityProbabilityDTO
-    )
 
 
 class GameStateDTO(BaseDTO):
@@ -38,11 +30,15 @@ class GameStateDTO(BaseDTO):
     dice: list[DiceShowDTO] = Field(default_factory=list)
     available_actions: list[str] = Field(default_factory=list)
     winner: Optional[TeamDTO] = Field(default=None)
+    phase: str = Field(default="ROLANDO")
+    rolls_left: int = Field(default=3)
+    arrows_in_pile: int = Field(default=9)
 
 
 class CreateAuthoritativeGameDTO(BaseDTO):
     player_name: str = Field(default="Lucas")
     players_total: int = Field(default=5)
+    shuffle_roles: bool = Field(default=False)
 
 
 class ShootDistanceCommandDTO(BaseDTO):

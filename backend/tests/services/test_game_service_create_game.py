@@ -28,43 +28,6 @@ def test_exactly_one_sheriff_exists():
     assert sheriff_count == 1
 
 
-def test_sheriff_starts_with_xerife_probability_one():
-    service = GameService()
-
-    state = service.create_game(
-        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
-    )
-
-    internal_state = service._games[state.game_id]
-    sheriff = internal_state.players[0]
-    assert sheriff.papel_probability.xerife == 1.0
-
-
-def test_hidden_players_start_with_xerife_probability_zero():
-    service = GameService()
-
-    state = service.create_game(
-        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
-    )
-
-    internal_state = service._games[state.game_id]
-    for player in internal_state.players[1:]:
-        assert player.papel_probability.xerife == 0.0
-
-
-def test_hidden_players_probabilities_sum_to_one():
-    service = GameService()
-
-    state = service.create_game(
-        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
-    )
-
-    internal_state = service._games[state.game_id]
-    for player in internal_state.players[1:]:
-        total = player.papel_probability.total()
-        assert abs(total - 1.0) < 0.001
-
-
 def test_first_state_returned_does_not_leak_internal_fields():
     service = GameService()
 
@@ -82,8 +45,19 @@ def test_game_has_status_running_after_creation():
     service = GameService()
 
     state = service.create_game(
-        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=3)
+        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=4)
     )
 
     assert state.status == "Running"
     assert state.winner is None
+
+
+def test_sheriff_is_always_the_human_player_when_roles_are_not_shuffled():
+    service = GameService()
+
+    state = service.create_game(
+        CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5, shuffle_roles=False)
+    )
+
+    assert state.players[0].user_name == "Lucas"
+    assert state.players[0].revealed_identity == IdentityDTO.XERIFE.value

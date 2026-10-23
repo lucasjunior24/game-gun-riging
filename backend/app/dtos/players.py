@@ -63,6 +63,7 @@ class PlayerDTO(BaseDTO):
     is_bot: bool = Field(default=True)
     arrow: int = Field(default=0)
     bullet: int = Field(default=0)
+    max_bullet: int = Field(default=3)
     papel_probability: IdentityProbabilityDTO = Field(
         default_factory=IdentityProbabilityDTO
     )

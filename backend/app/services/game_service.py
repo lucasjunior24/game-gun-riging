@@ -1,288 +1,222 @@
 import random
-from dataclasses import dataclass, field
 from uuid import uuid4
 
-from app.dtos.character import CharacterDTO, IdentityDTO, TeamDTO
-from app.dtos.dice import (
-    DiceShowDTO,
-    ExecuteDicesDTO,
-    ExecuteDistanceDTO,
-    UserBulletsDTO,
-)
+from app.dtos.character import CharacterDTO
+from app.dtos.dice import DiceShowDTO
 from app.dtos.game_state import (
-    BotTurnResultDTO,
     CreateAuthoritativeGameDTO,
     ExecuteShotsCommandDTO,
     GameStateDTO,
-    InternalPlayerDTO,
     PublicPlayerDTO,
     RollDiceCommandDTO,
-    ShootDistanceCommandDTO,
 )
-from app.dtos.history import ActionTypeDTO, GameActionHistoryDTO
-from app.dtos.players import IdentityProbabilityDTO, PlayerDTO
+from app.engine import GameEngine
+from app.engine.dice import MAX_ROLLS, DiceFace
+from app.engine.rules import Assignment, PlayerSpec
+from app.engine.state import EngineState, EnginePlayer, GameStatus, TurnPhase
 from app.services.belief_service import BeliefService
+from app.services.bot_turn_runner import BotTurnRunner
 from app.services.policy_service import ShotPolicyService
 
-
-def _team_for_identity(identity: IdentityDTO) -> TeamDTO:
-    if identity == IdentityDTO.ASSISTENTE:
-        return TeamDTO.XERIFE
-    if identity == IdentityDTO.XERIFE:
-        return TeamDTO.XERIFE
-    if identity == IdentityDTO.FORA_DA_LEI:
-        return TeamDTO.FORA_DA_LEI
-    return TeamDTO.RENEGADO
-
-
-def _identity_equals(value: IdentityDTO | str, identity: IdentityDTO) -> bool:
-    return value == identity or value == identity.value
-
-
-def _team_equals(value: TeamDTO | str, team: TeamDTO) -> bool:
-    return value == team or value == team.value
-
-
-@dataclass
-class InternalGameState:
-    game_id: str
-    players: list[InternalPlayerDTO]
-    current_player_index: int = 0
-    round_number: int = 1
-    turn_number: int = 1
-    status: str = "Running"
-    winner: TeamDTO | None = None
-    action_history: list[GameActionHistoryDTO] = field(default_factory=list)
+_DICE_NUMERAL = {
+    DiceFace.SHOT_1: 1,
+    DiceFace.SHOT_2: 2,
+    DiceFace.DYNAMITE: 3,
+    DiceFace.BEER: 4,
+    DiceFace.ARROW: 5,
+    DiceFace.GATLING: 6,
+}
+_DICE_SHOW = {
+    DiceFace.SHOT_1: "1",
+    DiceFace.SHOT_2: "2",
+    DiceFace.DYNAMITE: "Dinamite",
+    DiceFace.BEER: "Cerveja",
+    DiceFace.ARROW: "Flexa",
+    DiceFace.GATLING: "Metralhadora",
+}
 
 
 class GameService:
-    _games: dict[str, InternalGameState] = {}
+    _games: dict[str, EngineState] = {}
 
     def __init__(self):
+        self.engine = GameEngine()
         self.belief_service = BeliefService()
 
+    # ---------- comandos ----------
+
     def create_game(self, command: CreateAuthoritativeGameDTO) -> GameStateDTO:
-        game_id = str(uuid4())
-        players = self._create_players(command.player_name, command.players_total)
-        state = InternalGameState(game_id=game_id, players=players)
-        self._refresh_beliefs(state)
-        self._games[game_id] = state
+        specs = self._player_specs(command.player_name, command.players_total)
+        state = self.engine.new_game(
+            str(uuid4()), specs, random.Random(), command.shuffle_roles
+        )
+        self._games[state.game_id] = state
         return self.to_public_state(state)
 
     def get_state(self, game_id: str) -> GameStateDTO:
         return self.to_public_state(self._get_game(game_id))
 
+    def roll_dice(self, game_id: str, command: RollDiceCommandDTO) -> GameStateDTO:
+        state = self._get_game(game_id)
+        seat = state.turn.seat
+        if state.turn.rolls_used == 0:
+            self.engine.roll(state, seat)
+        else:
+            locked = {d.index - 1 for d in command.locked_dice_indexes if d.locked}
+            reroll = {
+                die.index
+                for die in state.turn.dice
+                if die.index not in locked and die.can_reroll
+            }
+            self.engine.roll(state, seat, reroll)
+        return self.to_public_state(state)
+
     def execute_shots(
         self, game_id: str, command: ExecuteShotsCommandDTO
     ) -> GameStateDTO:
         state = self._get_game(game_id)
-        actor = self._find_player_by_id(state.players, command.actor_user_id)
-
-        for distance in command.shots_by_distance:
-            for user_bullets in distance.user_bullets:
-                if user_bullets.shots <= 0:
-                    continue
-                target = self._find_player_by_name(
-                    state.players, user_bullets.user_name
-                )
-                if not target or not target.is_alive:
-                    continue
-
-                life_before = target.bullet
-                target.bullet = max(0, target.bullet - user_bullets.shots)
-                target.is_alive = target.bullet > 0
-
-                state.action_history.append(
-                    GameActionHistoryDTO(
-                        game_id=state.game_id,
-                        round_number=state.round_number,
-                        turn_number=state.turn_number,
-                        actor_user_name=actor.user_name,
-                        actor_identity=actor.identity,
-                        action_type=ActionTypeDTO.TIRO,
-                        target_user_name=target.user_name,
-                        target_identity=target.identity,
-                        distance=distance.distance,
-                        shots=user_bullets.shots,
-                        target_life_before=life_before,
-                        target_life_after=target.bullet,
-                    )
-                )
-
-        state.players = [player for player in state.players if player.is_alive]
-        self._refresh_beliefs(state)
-        self._resolve_winner(state)
-        if state.status == "Running":
-            self._advance_turn(state)
-        return self.to_public_state(state)
+        actor = self._seat_by_user_id(state, command.actor_user_id)
+        if state.turn.phase is TurnPhase.ROLLING:
+            self.engine.stop_rolling(state, actor)
+        assignments = self._assignments_from_command(state, actor, command)
+        self._games[game_id] = self.engine.resolve(state, actor, assignments)
+        return self.to_public_state(self._games[game_id])
 
     def finish_turn(self, game_id: str) -> GameStateDTO:
         state = self._get_game(game_id)
-        self._advance_turn(state)
-        return self.to_public_state(state)
-
-    def get_dice_names(self, dice: str) -> str:
-        if dice == "3":
-            return "Dinamite"
-        elif dice == "4":
-            return "Cerveja"
-        elif dice == "5":
-            return "Flexa"
-        elif dice == "6":
-            return "Metralhadora"
-
-        return dice
-
-    def roll_dice(self, game_id: str, command: RollDiceCommandDTO) -> GameStateDTO:
-        state = self._get_game(game_id)
-        dice_map: dict[int, DiceShowDTO] = {
-            dice.index: dice for dice in command.locked_dice_indexes
-        }
-
-        dice_faces = ["1", "2", "3", "4", "5", "6"]
-        dice_results: list[DiceShowDTO] = []
-        for i in range(5):
-            current_dice = dice_map.get(i + 1, None)
-            if current_dice and current_dice.locked:
-                dice_results.append(current_dice)
-                continue
-            face = random.choice(dice_faces)
-            dice = self.get_dice_names(face)
-            dice_results.append(
-                DiceShowDTO(
-                    dice=int(face),
-                    locked=True if dice == "Dinamite" else False,
-                    show=dice,
-                    index=i + 1,
-                )
-            )
-        state.dice = dice_results
+        seat = state.turn.seat
+        if state.turn.phase is TurnPhase.ROLLING and state.turn.rolls_used == 0:
+            self.engine.roll(state, seat)
+        if self._still_acting(state, seat, TurnPhase.ROLLING):
+            self.engine.stop_rolling(state, seat)
+        if self._still_acting(state, seat, TurnPhase.RESOLVING):
+            runner = BotTurnRunner(self.engine, ShotPolicyService())
+            state = runner.resolve_pending(state, seat)
+        self._games[game_id] = state
         return self.to_public_state(state)
 
     def execute_bot_turn(self, game_id: str) -> GameStateDTO:
         state = self._get_game(game_id)
-        current = state.players[state.current_player_index]
-        if not current.is_bot:
-            raise ValueError(f"Jogador {current.user_name} nao e um bot")
+        if not state.current_player.is_bot:
+            raise ValueError(f"Jogador {state.current_player.user_name} nao e um bot")
+        runner = BotTurnRunner(self.engine, ShotPolicyService())
+        self._games[game_id] = runner.play_turn(state)
+        return self.to_public_state(self._games[game_id])
 
-        self._refresh_beliefs(state)
+    # ---------- traducao para DTO ----------
 
-        sheriff = self._get_sheriff(state.players)
-        sheriff_user_name = sheriff.user_name if sheriff else None
-
-        alive_players = [p for p in state.players if p.is_alive]
-        one_distance_players = [
-            self._as_player_dto(p)
-            for p in alive_players
-            if p.user_id != current.user_id
-        ]
-
-        execution = ExecuteDicesDTO(
-            game_id=state.game_id,
-            current_player=self._as_player_dto(current),
-            current_identity=str(current.identity) if current.identity else "",
-            table_situation=f"round_{state.round_number}_turn_{state.turn_number}",
-            one_distance=ExecuteDistanceDTO(
-                bullet_total=current.bullet,
-                players_options=one_distance_players,
-            ),
-            two_distance=None,
-            action_history=list(state.action_history),
-        )
-
-        policy = ShotPolicyService()
-        prediction = policy.predict(execution)
-
-        for decision in prediction.decisions:
-            target = self._find_player_by_name(state.players, decision.target_user_name)
-            if not target or not target.is_alive:
-                continue
-
-            life_before = target.bullet
-            target.bullet = max(0, target.bullet - decision.shots)
-            target.is_alive = target.bullet > 0
-
-            state.action_history.append(
-                GameActionHistoryDTO(
-                    game_id=state.game_id,
-                    round_number=state.round_number,
-                    turn_number=state.turn_number,
-                    actor_user_name=current.user_name,
-                    actor_identity=current.identity,
-                    action_type=ActionTypeDTO.TIRO,
-                    target_user_name=target.user_name,
-                    target_identity=target.identity,
-                    distance=decision.distance,
-                    shots=decision.shots,
-                    target_life_before=life_before,
-                    target_life_after=target.bullet,
-                )
-            )
-
-        state.players = [p for p in state.players if p.is_alive]
-        self._refresh_beliefs(state)
-        self._resolve_winner(state)
-        if state.status == "Running":
-            self._advance_turn(state)
-        return self.to_public_state(state)
-
-    def to_public_state(self, state: InternalGameState) -> GameStateDTO:
-        current_player = state.players[state.current_player_index]
+    def to_public_state(self, state: EngineState) -> GameStateDTO:
+        current = state.current_player
         return GameStateDTO(
             game_id=state.game_id,
-            status=state.status,
+            status=state.status.value,
             round_number=state.round_number,
             turn_number=state.turn_number,
-            current_player=self._to_public_player(current_player),
-            current_player_index=state.current_player_index,
+            current_player=self._to_public_player(current),
+            current_player_index=current.seat,
             players=[self._to_public_player(player) for player in state.players],
+            dice=self._to_dice_show(state),
             available_actions=self._available_actions(state),
             winner=state.winner,
-            dice=state.dice if hasattr(state, "dice") else [],
+            phase=state.turn.phase.value,
+            rolls_left=max(0, MAX_ROLLS - state.turn.rolls_used),
+            arrows_in_pile=state.arrows_in_pile,
         )
 
-    def _create_players(
-        self, player_name: str, players_total: int
-    ) -> list[InternalPlayerDTO]:
-        names = [player_name, "Murilo", "Aragao", "Roberto", "Pedro"][:players_total]
-        identities = [
-            IdentityDTO.XERIFE,
-            IdentityDTO.FORA_DA_LEI,
-            IdentityDTO.FORA_DA_LEI,
-            IdentityDTO.RENEGADO,
-            IdentityDTO.ASSISTENTE,
+    def _to_public_player(self, player: EnginePlayer) -> PublicPlayerDTO:
+        return PublicPlayerDTO(
+            user_id=player.user_id,
+            user_name=player.user_name,
+            position=player.seat + 1,
+            character=self._character_dto(player),
+            is_alive=player.is_alive,
+            is_bot=player.is_bot,
+            arrow=player.arrows,
+            bullet=player.life,
+            max_bullet=player.max_life,
+            revealed_identity=player.public_identity,
+        )
+
+    def _to_dice_show(self, state: EngineState) -> list[DiceShowDTO]:
+        dice = []
+        for die in state.turn.dice:
+            if die.face is None:
+                continue
+            dice.append(
+                DiceShowDTO(
+                    dice=_DICE_NUMERAL[die.face],
+                    index=die.index + 1,
+                    locked=die.locked,
+                    show=_DICE_SHOW[die.face],
+                )
+            )
+        return dice
+
+    def _available_actions(self, state: EngineState) -> list[str]:
+        if state.status is not GameStatus.RUNNING:
+            return []
+        if state.turn.phase is TurnPhase.ROLLING:
+            return ["ROLL_DICE", "FINISH_TURN"]
+        return ["SHOOT", "FINISH_TURN"]
+
+    def _assignments_from_command(
+        self, state: EngineState, actor: int, command: ExecuteShotsCommandDTO
+    ) -> list[Assignment]:
+        pending = self.engine.pending_dice(state)
+        one_indexes = [i for i in pending if state.turn.dice[i].face is DiceFace.SHOT_1]
+        two_indexes = [i for i in pending if state.turn.dice[i].face is DiceFace.SHOT_2]
+        beer_indexes = [i for i in pending if state.turn.dice[i].face is DiceFace.BEER]
+
+        assignments: list[Assignment] = []
+        by_distance = {"1": one_indexes, "2": two_indexes}
+        for shot_distance in command.shots_by_distance:
+            indexes = by_distance.get(shot_distance.distance, [])
+            for user_bullets in shot_distance.user_bullets:
+                if user_bullets.shots <= 0:
+                    continue
+                target = self._seat_by_user_name(state, user_bullets.user_name)
+                for _ in range(user_bullets.shots):
+                    if not indexes:
+                        break
+                    assignments.append(
+                        Assignment(dice_index=indexes.pop(0), target_seat=target)
+                    )
+
+        # O formato atual nao sabe expressar cerveja: ela vai sempre para o proprio jogador.
+        for index in beer_indexes:
+            assignments.append(Assignment(dice_index=index, target_seat=actor))
+
+        return assignments
+
+    # ---------- setup ----------
+
+    def _player_specs(self, player_name: str, players_total: int) -> list[PlayerSpec]:
+        names = [
+            player_name,
+            "Murilo",
+            "Aragao",
+            "Roberto",
+            "Pedro",
+            "Joana",
+            "Clara",
+            "Dudu",
         ][:players_total]
         characters = self._default_characters()
 
-        players: list[InternalPlayerDTO] = []
-        for index, identity in enumerate(identities):
+        specs = []
+        for index, name in enumerate(names):
             character = characters[index % len(characters)]
-            probability = (
-                IdentityProbabilityDTO.revealed_sheriff()
-                if identity == IdentityDTO.XERIFE
-                else IdentityProbabilityDTO.neutral_hidden()
-            )
-            players.append(
-                InternalPlayerDTO(
+            specs.append(
+                PlayerSpec(
                     user_id=index + 1,
-                    user_name=names[index],
-                    position=index + 1,
-                    character=character,
-                    is_alive=True,
+                    user_name=name,
                     is_bot=index > 0,
-                    arrow=0,
-                    bullet=character.initial_bullet,
-                    revealed_identity=(
-                        IdentityDTO.XERIFE
-                        if _identity_equals(identity, IdentityDTO.XERIFE)
-                        else None
-                    ),
-                    identity=identity,
-                    team=_team_for_identity(identity),
-                    papel_probability=probability,
+                    character=character.character,
+                    life=character.initial_bullet,
+                    power=character.power,
                 )
             )
-        return players
+        return specs
 
     def _default_characters(self) -> list[CharacterDTO]:
         return [
@@ -318,121 +252,37 @@ class GameService:
             ),
         ]
 
-    def _to_public_player(self, player: InternalPlayerDTO) -> PublicPlayerDTO:
-        return PublicPlayerDTO(
-            user_id=player.user_id,
-            user_name=player.user_name,
-            position=player.position,
-            character=player.character,
-            is_alive=player.is_alive,
-            is_bot=player.is_bot,
-            arrow=player.arrow,
-            bullet=player.bullet,
-            revealed_identity=(
-                IdentityDTO.XERIFE
-                if _identity_equals(player.identity, IdentityDTO.XERIFE)
-                else None
-            ),
+    def _character_dto(self, player: EnginePlayer) -> CharacterDTO:
+        for character in self._default_characters():
+            if character.character == player.character:
+                return character
+        return CharacterDTO(
+            initial_bullet=player.max_life, power=player.power, character=player.character
         )
 
-    def _refresh_beliefs(self, state: InternalGameState) -> None:
-        sheriff = self._get_sheriff(state.players)
-        players = [self._as_player_dto(player) for player in state.players]
-        self.belief_service.update_beliefs_from_history(
-            players,
-            state.action_history,
-            sheriff.user_name if sheriff else None,
+    # ---------- utilidades ----------
+
+    def _still_acting(self, state: EngineState, seat: int, phase: TurnPhase) -> bool:
+        return (
+            state.status is GameStatus.RUNNING
+            and state.turn.seat == seat
+            and state.turn.phase is phase
         )
-        for player in state.players:
-            updated = self._find_player_dto_by_name(players, player.user_name)
-            if updated:
-                player.papel_probability = updated.papel_probability
 
-    def _resolve_winner(self, state: InternalGameState) -> None:
-        sheriff = self._get_sheriff(state.players)
-        outlaws = [
-            player
-            for player in state.players
-            if _team_equals(player.team, TeamDTO.FORA_DA_LEI)
-        ]
-        renegades = [
-            player
-            for player in state.players
-            if _identity_equals(player.identity, IdentityDTO.RENEGADO)
-        ]
-
-        if sheriff and not outlaws and not renegades:
-            state.status = "Done"
-            state.winner = TeamDTO.XERIFE
-        elif not sheriff:
-            state.status = "Done"
-            state.winner = TeamDTO.FORA_DA_LEI
-
-    def _advance_turn(self, state: InternalGameState) -> None:
-        if not state.players:
-            return
-        state.current_player_index += 1
-        if state.current_player_index >= len(state.players):
-            state.current_player_index = 0
-            state.round_number += 1
-        state.turn_number += 1
-
-    def _available_actions(self, state: InternalGameState) -> list[str]:
-        if state.status != "Running":
-            return []
-        return ["ROLL_DICE", "SHOOT", "FINISH_TURN"]
-
-    def _get_game(self, game_id: str) -> InternalGameState:
+    def _get_game(self, game_id: str) -> EngineState:
         game = self._games.get(game_id)
         if game is None:
             raise KeyError(f"Partida nao encontrada: {game_id}")
         return game
 
-    def _get_sheriff(
-        self, players: list[InternalPlayerDTO]
-    ) -> InternalPlayerDTO | None:
-        for player in players:
-            if (
-                _identity_equals(player.identity, IdentityDTO.XERIFE)
-                and player.is_alive
-            ):
-                return player
-        return None
-
-    def _find_player_by_id(
-        self, players: list[InternalPlayerDTO], user_id: int
-    ) -> InternalPlayerDTO:
-        for player in players:
+    def _seat_by_user_id(self, state: EngineState, user_id: int) -> int:
+        for player in state.players:
             if player.user_id == user_id:
-                return player
+                return player.seat
         raise ValueError(f"Jogador nao encontrado: {user_id}")
 
-    def _find_player_by_name(
-        self, players: list[InternalPlayerDTO], user_name: str
-    ) -> InternalPlayerDTO | None:
-        for player in players:
+    def _seat_by_user_name(self, state: EngineState, user_name: str) -> int:
+        for player in state.players:
             if player.user_name == user_name:
-                return player
-        return None
-
-    def _as_player_dto(self, player: InternalPlayerDTO) -> PlayerDTO:
-        dto = PlayerDTO(
-            user_id=player.user_id,
-            user_name=player.user_name,
-            position=player.position,
-            is_alive=player.is_alive,
-            is_bot=player.is_bot,
-            arrow=player.arrow,
-            bullet=player.bullet,
-            character=player.character,
-        )
-        dto.papel_probability = player.papel_probability
-        return dto
-
-    def _find_player_dto_by_name(
-        self, players: list[PlayerDTO], user_name: str
-    ) -> PlayerDTO | None:
-        for player in players:
-            if player.user_name == user_name:
-                return player
-        return None
+                return player.seat
+        raise ValueError(f"Jogador nao encontrado: {user_name}")
