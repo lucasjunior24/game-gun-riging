@@ -31,3 +31,5 @@ class GameEvent:
     actor_public_identity: IdentityDTO | None = None
     target_public_identity: IdentityDTO | None = None
     data: dict[str, Any] = field(default_factory=dict)
+    # Sequencial por partida, comeca em 1. Serve de cursor para o cliente
+    id: int = 0

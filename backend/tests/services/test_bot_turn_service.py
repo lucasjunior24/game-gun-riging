@@ -21,7 +21,7 @@ def test_bot_executes_turn_without_frontend_action_history():
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
     bot_state = service.execute_bot_turn(state.game_id)
 
     assert bot_state.game_id == state.game_id
@@ -34,7 +34,7 @@ def test_bot_turn_generates_history():
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
     service.execute_bot_turn(state.game_id)
 
     internal_state = service._games[state.game_id]
@@ -47,7 +47,7 @@ def test_public_state_does_not_leak_beliefs_after_bot_turn():
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
     service.execute_bot_turn(state.game_id)
 
     public_state = service.get_state(state.game_id)
@@ -102,7 +102,7 @@ def test_turn_advances_after_bot_action():
 
     initial_turn = state.turn_number
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
     service.execute_bot_turn(state.game_id)
 
     public_state = service.get_state(state.game_id)
@@ -125,7 +125,7 @@ def test_fallback_works_when_neural_model_does_not_exist():
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
 
     bot_state = service.execute_bot_turn(state.game_id)
     assert bot_state.status in ("Running", "Done")
@@ -138,7 +138,7 @@ def test_bot_turn_preserves_round_and_turn_state():
         CreateAuthoritativeGameDTO(player_name="Lucas", players_total=5)
     )
 
-    service.finish_turn(state.game_id)
+    service.legacy_finish_turn(state.game_id)
     bot_state = service.execute_bot_turn(state.game_id)
 
     assert bot_state.round_number >= 1

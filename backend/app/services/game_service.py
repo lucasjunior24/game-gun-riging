@@ -10,13 +10,31 @@ from app.dtos.game_state import (
     PublicPlayerDTO,
     RollDiceCommandDTO,
 )
+from app.dtos.game_view import (
+    AdvanceBotsCommandDTO,
+    DieViewDTO,
+    EventViewDTO,
+    FinishTurnV2CommandDTO,
+    GameViewDTO,
+    MeViewDTO,
+    PlayerViewDTO,
+    ResolveCommandDTO,
+    RollCommandDTO,
+    StopRollingCommandDTO,
+)
 from app.engine import GameEngine
+from app.engine.actions import allowed_actions, dice_targets
 from app.engine.dice import MAX_ROLLS, DiceFace
+from app.engine.errors import RuleViolation
 from app.engine.rules import Assignment, PlayerSpec
 from app.engine.state import EngineState, EnginePlayer, GameStatus, TurnPhase
+from app.engine.view import build_observation
 from app.services.belief_service import BeliefService
 from app.services.bot_turn_runner import BotTurnRunner
+from app.services.game_errors import GameNotFound, NotYourTurn, StaleVersion
 from app.services.policy_service import ShotPolicyService
+
+MAX_BOT_TURNS = 50
 
 _DICE_NUMERAL = {
     DiceFace.SHOT_1: 1,
@@ -43,7 +61,67 @@ class GameService:
         self.engine = GameEngine()
         self.belief_service = BeliefService()
 
-    # ---------- comandos ----------
+    # ---------- comandos autoritativos (Fase 2) ----------
+    # O cliente manda so intencoes. Cada comando confere versao e vez de quem pede,
+    # aplica no motor e devolve a visao do jogador com os eventos gerados.
+
+    def roll(self, game_id: str, cmd: RollCommandDTO) -> GameViewDTO:
+        state, seat = self._command(game_id, cmd.actor_user_id, cmd.expected_version)
+        since = self._last_event_id(state)
+        self.engine.roll(state, seat, cmd.reroll_indexes)
+        return self._store_and_view(game_id, state, seat, since)
+
+    def stop_rolling(self, game_id: str, cmd: StopRollingCommandDTO) -> GameViewDTO:
+        state, seat = self._command(game_id, cmd.actor_user_id, cmd.expected_version)
+        since = self._last_event_id(state)
+        self.engine.stop_rolling(state, seat)
+        return self._store_and_view(game_id, state, seat, since)
+
+    def resolve(self, game_id: str, cmd: ResolveCommandDTO) -> GameViewDTO:
+        state, seat = self._command(game_id, cmd.actor_user_id, cmd.expected_version)
+        since = self._last_event_id(state)
+        assignments = [
+            Assignment(
+                dice_index=a.dice_index,
+                target_seat=self._seat_by_user_id(state, a.target_user_id),
+            )
+            for a in cmd.assignments
+        ]
+        state = self.engine.resolve(state, seat, assignments)
+        return self._store_and_view(game_id, state, seat, since)
+
+    def finish_turn(self, game_id: str, cmd: FinishTurnV2CommandDTO) -> GameViewDTO:
+        state, seat = self._command(game_id, cmd.actor_user_id, cmd.expected_version)
+        if state.turn.phase is not TurnPhase.RESOLVING:
+            raise RuleViolation("Pare de rolar antes de encerrar o turno")
+        if self.engine.pending_dice(state):
+            raise RuleViolation("Resolva os dados de 1, 2 e Cerveja antes de encerrar o turno")
+        since = self._last_event_id(state)
+        state = self.engine.resolve(state, seat, [])
+        return self._store_and_view(game_id, state, seat, since)
+
+    def advance_bots(
+        self, game_id: str, cmd: AdvanceBotsCommandDTO, max_turns: int = MAX_BOT_TURNS
+    ) -> GameViewDTO:
+        """Joga os turnos dos bots ate a vez de um humano, o fim da partida ou `max_turns`."""
+        state = self._get_game(game_id)
+        self._check_version(state, cmd.expected_version)
+        since = self._last_event_id(state) if cmd.since_event_id is None else cmd.since_event_id
+        runner = BotTurnRunner(self.engine, ShotPolicyService())
+        for _ in range(max_turns):
+            if state.status is GameStatus.DONE or not state.current_player.is_bot:
+                break
+            state = runner.play_turn(state)
+        return self._store_and_view(game_id, state, self._human_seat(state), since)
+
+    def get_view(
+        self, game_id: str, viewer_user_id: int, since_event_id: int | None = None
+    ) -> GameViewDTO:
+        state = self._get_game(game_id)
+        seat = self._seat_by_user_id(state, viewer_user_id)
+        return self.to_view(state, seat, since_event_id or 0)
+
+    # ---------- comandos legados (rotas antigas, saem na Fase 6) ----------
 
     def create_game(self, command: CreateAuthoritativeGameDTO) -> GameStateDTO:
         specs = self._player_specs(command.player_name, command.players_total)
@@ -82,7 +160,7 @@ class GameService:
         self._games[game_id] = self.engine.resolve(state, actor, assignments)
         return self.to_public_state(self._games[game_id])
 
-    def finish_turn(self, game_id: str) -> GameStateDTO:
+    def legacy_finish_turn(self, game_id: str) -> GameStateDTO:
         state = self._get_game(game_id)
         seat = state.turn.seat
         if state.turn.phase is TurnPhase.ROLLING and state.turn.rolls_used == 0:
@@ -103,12 +181,80 @@ class GameService:
         self._games[game_id] = runner.play_turn(state)
         return self.to_public_state(self._games[game_id])
 
-    # ---------- traducao para DTO ----------
+    # ---------- visao por jogador ----------
+
+    def to_view(self, state: EngineState, viewer_seat: int, since_event_id: int = 0) -> GameViewDTO:
+        """Monta a resposta a partir da observacao do jogador: nenhum papel oculto de outro sai daqui."""
+        obs = build_observation(state, viewer_seat)
+        user_id = {p.seat: p.user_id for p in obs.players}
+        targets = dice_targets(state, obs.current_seat)
+        rolling = obs.phase is TurnPhase.ROLLING and obs.rolls_used > 0
+        return GameViewDTO(
+            game_id=state.game_id,
+            version=state.version,
+            status=obs.status.value,
+            phase=obs.phase.value,
+            round_number=obs.round_number,
+            turn_number=obs.turn_number,
+            current_user_id=user_id[obs.current_seat],
+            rolls_left=max(0, MAX_ROLLS - obs.rolls_used),
+            arrows_in_pile=obs.arrows_in_pile,
+            me=MeViewDTO(user_id=user_id[viewer_seat], identity=obs.my_identity),
+            players=[
+                PlayerViewDTO(
+                    user_id=p.user_id,
+                    user_name=p.user_name,
+                    seat=p.seat,
+                    character=state.players[p.seat].character,
+                    life=p.life,
+                    max_life=p.max_life,
+                    arrows=p.arrows,
+                    is_alive=p.is_alive,
+                    is_bot=p.is_bot,
+                    public_identity=p.public_identity,
+                    distance_from_me=p.distance_from_viewer,
+                )
+                for p in obs.players
+            ],
+            dice=[
+                DieViewDTO(
+                    index=d.index,
+                    face=d.face.value if d.face else None,
+                    locked=d.locked,
+                    can_reroll=rolling and d.face is not DiceFace.DYNAMITE,
+                    resolved=d.resolved,
+                    valid_target_user_ids=[user_id[s] for s in targets.get(d.index, [])],
+                )
+                for d in obs.dice
+            ],
+            allowed_actions=allowed_actions(state, viewer_seat),
+            winner=state.winner,
+            events=[
+                EventViewDTO(
+                    id=e.id,
+                    type=e.type.value,
+                    round_number=e.round_number,
+                    turn_number=e.turn_number,
+                    actor_user_id=user_id.get(e.actor_seat),
+                    target_user_id=user_id.get(e.target_seat),
+                    amount=e.amount,
+                    actor_public_identity=e.actor_public_identity,
+                    target_public_identity=e.target_public_identity,
+                    data=e.data,
+                )
+                for e in obs.events
+                if e.id > since_event_id
+            ],
+            last_event_id=self._last_event_id(state),
+        )
+
+    # ---------- traducao para DTO legado ----------
 
     def to_public_state(self, state: EngineState) -> GameStateDTO:
         current = state.current_player
         return GameStateDTO(
             game_id=state.game_id,
+            version=state.version,
             status=state.status.value,
             round_number=state.round_number,
             turn_number=state.turn_number,
@@ -262,6 +408,36 @@ class GameService:
 
     # ---------- utilidades ----------
 
+    def _command(
+        self, game_id: str, actor_user_id: int, expected_version: int
+    ) -> tuple[EngineState, int]:
+        """Checagens comuns a todo comando humano: partida, versao e vez."""
+        state = self._get_game(game_id)
+        self._check_version(state, expected_version)
+        seat = self._seat_by_user_id(state, actor_user_id)
+        if state.players[seat].is_bot:
+            raise NotYourTurn("Bots so jogam por bots/advance")
+        if state.turn.seat != seat:
+            raise NotYourTurn(f"Vez de {state.current_player.user_name}")
+        return state, seat
+
+    def _check_version(self, state: EngineState, expected_version: int) -> None:
+        if state.version != expected_version:
+            raise StaleVersion(state.version)
+
+    def _store_and_view(
+        self, game_id: str, state: EngineState, viewer_seat: int, since_event_id: int
+    ) -> GameViewDTO:
+        # roll muda o estado no lugar e resolve devolve uma copia: guardar sempre padroniza os dois
+        self._games[game_id] = state
+        return self.to_view(state, viewer_seat, since_event_id)
+
+    def _last_event_id(self, state: EngineState) -> int:
+        return state.next_event_id - 1
+
+    def _human_seat(self, state: EngineState) -> int:
+        return next((p.seat for p in state.players if not p.is_bot), 0)
+
     def _still_acting(self, state: EngineState, seat: int, phase: TurnPhase) -> bool:
         return (
             state.status is GameStatus.RUNNING
@@ -272,7 +448,7 @@ class GameService:
     def _get_game(self, game_id: str) -> EngineState:
         game = self._games.get(game_id)
         if game is None:
-            raise KeyError(f"Partida nao encontrada: {game_id}")
+            raise GameNotFound(f"Partida nao encontrada: {game_id}")
         return game
 
     def _seat_by_user_id(self, state: EngineState, user_id: int) -> int:
