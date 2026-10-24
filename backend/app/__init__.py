@@ -4,6 +4,7 @@ from app.views.dice import dices_router
 from app.views.chat import chat_ai_router
 from app.views.match_game import match_game_router
 from app.views.game_state import games_router
+from app.views.games_v2 import games_v2_router
 from app.views.history import history_router
 from app.db import connection
 from app.views.user import app
@@ -36,6 +37,7 @@ app.include_router(chat_ai_router)
 app.include_router(match_game_router)
 app.include_router(history_router)
 app.include_router(games_router)
+app.include_router(games_v2_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

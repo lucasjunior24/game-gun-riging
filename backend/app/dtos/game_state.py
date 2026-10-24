@@ -21,6 +21,7 @@ class PublicPlayerDTO(BaseDTO):
 
 class GameStateDTO(BaseDTO):
     game_id: str
+    version: int = Field(default=0)
     status: str = Field(default="Running")
     round_number: int = Field(default=1)
     turn_number: int = Field(default=1)

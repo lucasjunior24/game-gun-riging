@@ -1,121 +1,181 @@
-import ChampionModal from "@/src/components/alerts/champion";
-import CardPlayer from "@/src/components/cardPlayer";
-import Dices from "@/src/components/dices";
-import { GameStateDTO } from "@/src/dtos/gameState";
-import React, { useCallback, useEffect, useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useReducer, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { createGame } from "@/src/api/game";
+import ChampionModal from "@/src/components/alerts/champion";
+import { ButtonBase } from "@/src/components/buttonBase";
+import DiceTray from "@/src/components/diceTray";
+import EventToast from "@/src/components/eventToast";
+import Table from "@/src/components/table";
+import {
+    TurnAction,
+    TurnUi,
+    canConfirm,
+    canReroll,
+    highlightedTargets,
+    initialTurnUi,
+    toAssignments,
+    turnReducer,
+    turnStage,
+} from "@/src/game/turnReducer";
+import { useGame } from "@/src/hooks/useGame";
 
 export default function BangMatch() {
-    const [gameState, setGameState] = useState<GameStateDTO | null>(null);
-    const [gameID, setGameID] = useState<string | null>(null);
-    const [openModal, setOpenModal] = useState(false);
+    const game = useGame("Lucas");
+    const { view, animating, busy, error } = game;
 
-    console.log("game_id", gameID);
-    // Criar partida via POST /games usando a nova API
+    // O reducer recebe a visão atual do servidor a cada render
+    const [ui, dispatch] = useReducer(
+        (state: TurnUi, action: TurnAction) =>
+            view ? turnReducer(state, action, view) : state,
+        initialTurnUi,
+    );
+    const [championOpen, setChampionOpen] = useState(false);
 
-    async function initializeGame() {
-        try {
-            const state = await createGame({
-                player_name: "Lucas",
-                players_total: 5,
-            });
-            if (state) {
-                setGameState(state);
-                setGameID(state.game_id);
-            }
-        } catch (error) {
-            console.error("Erro ao criar partida:", error);
-        }
-    }
-    const initializeGameRun = useCallback(() => {
-        initializeGame();
-    }, []);
+    // Estado de interface vale para uma versão só: qualquer mudança do servidor zera
+    const version = view?.version;
     useEffect(() => {
-        initializeGameRun();
-    }, [initializeGameRun]);
+        dispatch({ type: "RESET" });
+    }, [version]);
 
-    // Atualizar estado a cada ação
-    const handleStateUpdate = (newState: GameStateDTO) => {
-        setGameState(newState);
-    };
-
-    // Verificar se o jogo acabou
+    const winner = view?.winner;
     useEffect(() => {
-        if (gameState?.status === "Done" && gameState?.winner) {
-            setOpenModal(true);
-        }
-    }, [gameState?.status, gameState?.winner]);
+        setChampionOpen(Boolean(winner));
+    }, [winner]);
 
-    if (!gameState) {
+    if (!view) {
         return (
-            <View style={styles.container}>
-                <Text>Carregando partida...</Text>
+            <View style={styles.loading}>
+                <Text>{error ? `Erro: ${error}` : "Carregando partida..."}</Text>
+                {error && <ButtonBase text="Tentar de novo" onPress={game.retry} />}
             </View>
         );
     }
 
-    const { status, players, current_player_index, winner } = gameState;
+    const stage = turnStage(view);
+    // Durante a animação o estado mostrado ainda é o anterior: nada de ações
+    const locked = busy || animating !== null;
+
+    function handlePressDie(index: number) {
+        if (stage === "ESCOLHENDO_REROLL") dispatch({ type: "TOGGLE_REROLL", index });
+        if (stage === "ATRIBUINDO_DADOS") dispatch({ type: "SELECT_DIE", index });
+    }
 
     return (
-        <View style={styles.container}>
-            <FlatList
-                data={players}
-                renderItem={({ index, item }) => (
-                    <CardPlayer
-                        player={item}
-                        playerMoment={current_player_index}
-                        index={index}
+        <ScrollView contentContainerStyle={styles.container}>
+            <EventToast step={animating} onSkip={game.skipAnimation} />
+
+            <Table
+                view={view}
+                animating={animating}
+                highlightedIds={locked ? [] : highlightedTargets(ui, view)}
+                assignments={ui.assignments}
+                onPressPlayer={(player) =>
+                    dispatch({ type: "ASSIGN", targetUserId: player.user_id })
+                }
+            />
+
+            <DiceTray
+                view={view}
+                stage={stage}
+                ui={ui}
+                disabled={locked}
+                onPressDie={handlePressDie}
+            />
+
+            <Text style={styles.hint}>{hintFor(stage, view.rolls_left)}</Text>
+            {error && <Text style={styles.error}>{error}</Text>}
+
+            <View style={styles.actions}>
+                {stage === "PODE_ROLAR" && (
+                    <ButtonBase text="Rolar dados" disabled={locked} onPress={() => game.roll([])} />
+                )}
+                {stage === "ESCOLHENDO_REROLL" && (
+                    <>
+                        <ButtonBase
+                            text={`Rolar de novo (${ui.rerollMarked.length}) · restam ${view.rolls_left}`}
+                            disabled={locked || !canReroll(ui, view)}
+                            onPress={() => game.roll(ui.rerollMarked)}
+                        />
+                        <ButtonBase
+                            text="Parar"
+                            color="#6d4c41"
+                            disabled={locked}
+                            onPress={game.stopRolling}
+                        />
+                    </>
+                )}
+                {stage === "ATRIBUINDO_DADOS" && (
+                    <ButtonBase
+                        text="Confirmar"
+                        disabled={locked || !canConfirm(ui, view)}
+                        onPress={() => game.resolve(toAssignments(ui))}
                     />
                 )}
-                keyExtractor={(item, index) => String(index)}
-            />
-            <Dices gameState={gameState} onStateUpdate={handleStateUpdate} />
-            {status === "Done" && winner && (
+                {stage === "ENCERRANDO" && (
+                    <ButtonBase text="Encerrar turno" disabled={locked} onPress={game.finishTurn} />
+                )}
+                {error && !locked && (
+                    <ButtonBase text="Tentar de novo" color="#c62828" onPress={game.retry} />
+                )}
+                {stage === "FIM" && (
+                    <ButtonBase text="Nova partida" disabled={locked} onPress={game.newGame} />
+                )}
+            </View>
+
+            {winner && (
                 <ChampionModal
-                    isVisible={openModal}
-                    onClose={() => setOpenModal(!openModal)}
+                    isVisible={championOpen}
+                    onClose={() => setChampionOpen(false)}
                     teamChampion={winner}
                 />
             )}
-        </View>
+        </ScrollView>
     );
 }
 
-const styles = StyleSheet.create({
-    container: {
-        flexDirection: "column",
-        justifyContent: "space-between",
-    },
-    footer: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        padding: 10,
-    },
-    card: {
-        paddingVertical: 15,
-    },
-    parentItem: {
-        padding: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: "#ccc",
-        flexDirection: "row",
-        justifyContent: "space-between",
-    },
-    parentTitle: {
-        fontSize: 15,
-        fontWeight: "bold",
-    },
+function hintFor(stage: ReturnType<typeof turnStage>, rollsLeft: number): string {
+    switch (stage) {
+        case "PODE_ROLAR":
+            return "Sua vez: role os dados.";
+        case "ESCOLHENDO_REROLL":
+            return rollsLeft > 0
+                ? "Toque nos dados que quer rolar de novo, ou pare."
+                : "Sem rolagens restantes.";
+        case "ATRIBUINDO_DADOS":
+            return "Toque num dado destacado e depois num jogador aceso.";
+        case "ENCERRANDO":
+            return "Nada para atribuir: encerre o turno.";
+        case "FIM":
+            return "Fim de jogo.";
+        default:
+            return "Vez dos bots...";
+    }
+}
 
-    childItem: {
-        fontSize: 16,
-        marginLeft: 20,
+const styles = StyleSheet.create({
+    loading: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+        gap: 12,
+        padding: 16,
     },
-    button: {
-        backgroundColor: "blue",
-        borderRadius: 4,
-        padding: 5,
-        width: 150,
+    container: {
+        paddingVertical: 8,
+        gap: 8,
+    },
+    hint: {
+        textAlign: "center",
+        color: "#555",
+        paddingHorizontal: 16,
+    },
+    error: {
+        textAlign: "center",
+        color: "#c62828",
+        paddingHorizontal: 16,
+    },
+    actions: {
+        paddingHorizontal: 16,
+        gap: 8,
     },
 });

@@ -28,17 +28,16 @@ async def create_game(command: CreateAuthoritativeGameDTO):
     return ResponseDTO(data=state, message="success")
 
 
-@games_router.get("/{game_id}/state", response_model=ResponseModelDTO[GameStateDTO])
-async def get_game_state(game_id: str):
-    try:
-        state = game_service.get_state(game_id)
-    except KeyError as error:
-        raise HTTPException(status_code=404, detail=str(error))
-    return ResponseDTO(data=state, message="success")
+# GET /games/{game_id}/state fica em games_v2.py: devolve a visao nova com viewer_user_id
+# e o formato antigo sem ele.
+
+# As rotas abaixo sao da API antiga e saem na Fase 6. Use as de games_v2.py.
 
 
 @games_router.post(
-    "/{game_id}/actions/shots", response_model=ResponseModelDTO[GameStateDTO]
+    "/{game_id}/actions/shots",
+    response_model=ResponseModelDTO[GameStateDTO],
+    deprecated=True,
 )
 async def execute_shots(game_id: str, command: ExecuteShotsCommandDTO):
     try:
@@ -51,11 +50,13 @@ async def execute_shots(game_id: str, command: ExecuteShotsCommandDTO):
 
 
 @games_router.post(
-    "/{game_id}/actions/finish-turn", response_model=ResponseModelDTO[GameStateDTO]
+    "/{game_id}/actions/finish-turn",
+    response_model=ResponseModelDTO[GameStateDTO],
+    deprecated=True,
 )
 async def finish_turn(game_id: str, command: FinishTurnCommandDTO):
     try:
-        state = game_service.finish_turn(game_id)
+        state = game_service.legacy_finish_turn(game_id)
     except KeyError as error:
         raise HTTPException(status_code=404, detail=str(error))
     except ValueError as error:
@@ -64,7 +65,9 @@ async def finish_turn(game_id: str, command: FinishTurnCommandDTO):
 
 
 @games_router.post(
-    "/{game_id}/dice/roll", response_model=ResponseModelDTO[GameStateDTO]
+    "/{game_id}/dice/roll",
+    response_model=ResponseModelDTO[GameStateDTO],
+    deprecated=True,
 )
 async def roll_dice(game_id: str, command: RollDiceCommandDTO):
     try:
@@ -76,7 +79,11 @@ async def roll_dice(game_id: str, command: RollDiceCommandDTO):
     return ResponseDTO(data=state, message="success")
 
 
-@games_router.post("/{game_id}/bot-turn", response_model=ResponseModelDTO[GameStateDTO])
+@games_router.post(
+    "/{game_id}/bot-turn",
+    response_model=ResponseModelDTO[GameStateDTO],
+    deprecated=True,
+)
 async def execute_bot_turn(game_id: str):
     try:
         state = game_service.execute_bot_turn(game_id)

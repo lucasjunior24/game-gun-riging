@@ -1,104 +1,97 @@
+import { isAxiosError } from "axios";
+
+import { CreateGameDTO, GameStateDTO } from "../dtos/gameState";
 import {
-    CreateGameDTO,
-    ExecuteShotsCommandDTO,
-    GameStateDTO,
-    RollDiceCommandDTO,
-} from "../dtos/gameState";
+    AdvanceBotsCommand,
+    Command,
+    GameView,
+    ResolveCommand,
+    RollCommand,
+} from "../dtos/gameView";
 import { ResponseDTO } from "../dtos/response";
 import { api } from "./axios";
 
-// POST /games - Criar nova partida
-export async function createGame(
-    command: CreateGameDTO,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.post<ResponseDTO<GameStateDTO>>(
-            "/games",
-            command,
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro ao criar partida:", error);
-        throw error;
-    }
+// Os erros sobem para o useGame, que decide o que fazer (409 -> buscar o estado).
+
+// POST /games - Criar nova partida (ainda devolve o formato antigo)
+export async function createGame(command: CreateGameDTO): Promise<GameStateDTO> {
+    const response = await api.post<ResponseDTO<GameStateDTO>>("/games", command);
+    return response.data.data;
 }
 
-// GET /games/{game_id}/state - Buscar estado público atual
-export async function getGameState(
+// GET /games/{game_id}/state - Visão do jogador
+export async function getState(
     game_id: string,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.get<ResponseDTO<GameStateDTO>>(
-            `/games/${game_id}/state`,
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro ao buscar estado:", error);
-        throw error;
-    }
+    viewer_user_id: number,
+    since_event_id?: number,
+): Promise<GameView> {
+    const response = await api.get<ResponseDTO<GameView>>(
+        `/games/${game_id}/state`,
+        { params: { viewer_user_id, since_event_id } },
+    );
+    return response.data.data;
 }
 
-// POST /games/{game_id}/dice/roll - Rolar dados (backend decide os resultados)
-export async function rollDice(
-    game_id: string,
-    command: RollDiceCommandDTO,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.post<ResponseDTO<GameStateDTO>>(
-            `/games/${game_id}/dice/roll`,
-            command,
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro ao rolar dados:", error);
-        throw error;
-    }
+// POST /games/{game_id}/roll - Primeira rolagem (todos) ou rolar de novo os marcados
+export async function roll(game_id: string, command: RollCommand): Promise<GameView> {
+    const response = await api.post<ResponseDTO<GameView>>(
+        `/games/${game_id}/roll`,
+        command,
+    );
+    return response.data.data;
 }
 
-// POST /games/{game_id}/actions/shots - Executar tiros do usuário
-export async function executeShots(
-    game_id: string,
-    command: ExecuteShotsCommandDTO,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.post<ResponseDTO<GameStateDTO>>(
-            `/games/${game_id}/actions/shots`,
-            command,
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro ao executar tiros:", error);
-        throw error;
-    }
+// POST /games/{game_id}/stop-rolling - Parar de rolar e ir para a resolução
+export async function stopRolling(game_id: string, command: Command): Promise<GameView> {
+    const response = await api.post<ResponseDTO<GameView>>(
+        `/games/${game_id}/stop-rolling`,
+        command,
+    );
+    return response.data.data;
 }
 
-// POST /games/{game_id}/actions/finish-turn - Passar turno
-export async function finishTurn(
+// POST /games/{game_id}/resolve - Um alvo para cada dado de 1, 2 e Cerveja
+export async function resolve(
     game_id: string,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.post<ResponseDTO<GameStateDTO>>(
-            `/games/${game_id}/actions/finish-turn`,
-            { actor_user_id: 0 },
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro ao finalizar turno:", error);
-        throw error;
-    }
+    command: ResolveCommand,
+): Promise<GameView> {
+    const response = await api.post<ResponseDTO<GameView>>(
+        `/games/${game_id}/resolve`,
+        command,
+    );
+    return response.data.data;
 }
 
-// POST /games/{game_id}/bot-turn - Executar turno do bot
-export async function executeBotTurn(
+// POST /games/{game_id}/finish-turn - Encerrar turno sem dados pendentes
+export async function finishTurn(game_id: string, command: Command): Promise<GameView> {
+    const response = await api.post<ResponseDTO<GameView>>(
+        `/games/${game_id}/finish-turn`,
+        command,
+    );
+    return response.data.data;
+}
+
+// POST /games/{game_id}/bots/advance - Joga os bots até a vez do humano
+export async function advanceBots(
     game_id: string,
-): Promise<GameStateDTO | undefined> {
-    try {
-        const response = await api.post<ResponseDTO<GameStateDTO>>(
-            `/games/${game_id}/bot-turn`,
-        );
-        return response.data.data;
-    } catch (error) {
-        console.error("Erro no turno do bot:", error);
-        throw error;
+    command: AdvanceBotsCommand,
+): Promise<GameView> {
+    const response = await api.post<ResponseDTO<GameView>>(
+        `/games/${game_id}/bots/advance`,
+        command,
+    );
+    return response.data.data;
+}
+
+export function isConflict(error: unknown): boolean {
+    return isAxiosError(error) && error.response?.status === 409;
+}
+
+export function errorMessage(error: unknown): string {
+    if (isAxiosError(error)) {
+        const detail = error.response?.data?.detail;
+        if (typeof detail === "string") return detail;
+        return error.message;
     }
+    return error instanceof Error ? error.message : String(error);
 }

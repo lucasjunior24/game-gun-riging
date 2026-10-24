@@ -1,8 +1,9 @@
 import random
+from collections.abc import Iterable
 from dataclasses import dataclass
 
 from app.dtos.character import IdentityDTO, TeamDTO
-from app.engine.dice import DYNAMITE_LIMIT, FACES, GATLING_MIN, MAX_ROLLS, DiceFace
+from app.engine.dice import DICE_COUNT, DYNAMITE_LIMIT, FACES, GATLING_MIN, MAX_ROLLS, DiceFace
 from app.engine.errors import RuleViolation
 from app.engine.events import EventType, GameEvent
 from app.engine.roles import deal_roles
@@ -72,7 +73,9 @@ class GameEngine:
 
     # ---------- rolagem ----------
 
-    def roll(self, state: EngineState, seat: int, reroll_indexes: set[int] | None = None) -> None:
+    def roll(
+        self, state: EngineState, seat: int, reroll_indexes: Iterable[int] | None = None
+    ) -> None:
         turn = self._require_phase(state, seat, TurnPhase.ROLLING)
         if turn.rolls_used >= MAX_ROLLS:
             raise RuleViolation("Sem rolagens restantes")
@@ -80,12 +83,19 @@ class GameEngine:
         if turn.rolls_used == 0:
             indexes = {die.index for die in turn.dice}
         else:
-            indexes = set(reroll_indexes or ())
+            requested = list(reroll_indexes or ())
+            indexes = set(requested)
             if not indexes:
                 raise RuleViolation("Escolha ao menos um dado para rolar de novo")
+            if len(indexes) != len(requested):
+                raise RuleViolation("Indice de dado repetido")
             for index in indexes:
+                if not 0 <= index < DICE_COUNT:
+                    raise RuleViolation(f"Dado {index} nao existe")
                 if not turn.dice[index].can_reroll:
                     raise RuleViolation("Dinamite nao pode ser rolada de novo")
+
+        state.version += 1
 
         for index in sorted(indexes):
             die = turn.dice[index]
@@ -119,6 +129,7 @@ class GameEngine:
         turn = self._require_phase(state, seat, TurnPhase.ROLLING)
         if turn.rolls_used == 0:
             raise RuleViolation("Role os dados ao menos uma vez")
+        state.version += 1
         turn.phase = TurnPhase.RESOLVING
 
     # ---------- resolucao ----------
@@ -134,7 +145,12 @@ class GameEngine:
         """Aplica um unico dado numa copia do estado e devolve o novo estado."""
         self._require_phase(state, seat, TurnPhase.RESOLVING)
         draft = state.clone()
+        self._apply_assignment(draft, seat, assignment)
+        draft.version += 1
+        return draft
 
+    def _apply_assignment(self, draft: EngineState, seat: int, assignment: Assignment) -> None:
+        """Aplica um dado direto em `draft`. Quem chama garante que `draft` e uma copia."""
         pending = self.pending_dice(draft)
         if assignment.dice_index not in pending:
             raise RuleViolation(f"Dado {assignment.dice_index} nao esta pendente")
@@ -161,11 +177,10 @@ class GameEngine:
             self._damage(draft, seat, assignment.target_seat, 1)
 
         if draft.status is GameStatus.DONE or not draft.players[seat].is_alive:
-            return draft
+            return
 
         if not self.pending_dice(draft):
             self._finish_resolution(draft, seat)
-        return draft
 
     def resolve(self, state: EngineState, seat: int, assignments: list[Assignment]) -> EngineState:
         """Aplica todos os dados pendentes numa copia do estado e devolve o novo estado.
@@ -184,11 +199,12 @@ class GameEngine:
             key=lambda a: (RESOLUTION_ORDER[state.turn.dice[a.dice_index].face], a.dice_index),
         )
 
-        result = state
+        result = state.clone()
+        result.version += 1
         for assignment in ordered:
             if result.status is GameStatus.DONE or not result.players[seat].is_alive:
                 return result
-            result = self.resolve_one(result, seat, assignment)
+            self._apply_assignment(result, seat, assignment)
 
         if (
             result.status is GameStatus.RUNNING
@@ -320,8 +336,11 @@ class GameEngine:
     ) -> None:
         actor = state.players[actor_seat] if actor_seat is not None else None
         target = state.players[target_seat] if target_seat is not None else None
+        event_id = state.next_event_id
+        state.next_event_id += 1
         state.events.append(
             GameEvent(
+                id=event_id,
                 type=event_type,
                 round_number=state.round_number,
                 turn_number=state.turn_number,

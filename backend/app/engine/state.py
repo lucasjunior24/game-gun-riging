@@ -65,6 +65,9 @@ class EngineState:
     status: GameStatus = GameStatus.RUNNING
     winner: TeamDTO | None = None
     events: list[GameEvent] = field(default_factory=list)
+    # Sobe a cada comando aplicado. Usado no controle de versao otimista da API
+    version: int = 0
+    next_event_id: int = 1
 
     @property
     def current_player(self) -> EnginePlayer:
