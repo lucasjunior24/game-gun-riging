@@ -1,18 +1,22 @@
-from app.dtos.character import IdentityDTO
+from dataclasses import replace
+
+from app.bot.agent import Agent, Decision
 from app.engine import GameEngine
-from app.engine.dice import MAX_ROLLS, DiceFace
-from app.engine.rules import RESOLUTION_ORDER, Assignment
-from app.engine.seating import valid_targets
+from app.engine.dice import MAX_ROLLS
+from app.engine.events import EventType
 from app.engine.state import EngineState, GameStatus, TurnPhase
-from app.services.policy_service import ShotPolicyService
+from app.engine.view import build_observation
 
 
 class BotTurnRunner:
-    """Bot provisorio que joga um turno completo pelas regras do motor."""
+    """Joga um turno completo de bot pedindo cada decisao ao agente.
 
-    def __init__(self, engine: GameEngine, policy: ShotPolicyService):
+    O agente so recebe a observacao do bot, nunca o estado real.
+    """
+
+    def __init__(self, engine: GameEngine, agent: Agent):
         self.engine = engine
-        self.policy = policy
+        self.agent = agent
 
     def play_turn(self, state: EngineState) -> EngineState:
         seat = state.turn.seat
@@ -24,56 +28,55 @@ class BotTurnRunner:
     def _play_rolling(self, state: EngineState, seat: int) -> EngineState:
         self.engine.roll(state, seat)
         while self._still_rolling(state, seat) and state.turn.rolls_used < MAX_ROLLS:
-            reroll = self._choose_rerolls(state, seat)
-            if not reroll:
+            decision = self.agent.choose_reroll(build_observation(state, seat))
+            if not decision.action:
                 self.engine.stop_rolling(state, seat)
                 break
-            self.engine.roll(state, seat, reroll)
+            since = state.next_event_id
+            self.engine.roll(state, seat, decision.action)
+            self._annotate(state, since, seat, decision, (EventType.DICE_ROLLED,))
         return state
 
     def resolve_pending(self, state: EngineState, seat: int) -> EngineState:
-        """Resolve os dados pendentes um a um, escolhendo o alvo depois de cada aplicacao.
+        """Aplica o plano do agente dado a dado. Se alguem morre, pede um plano novo.
 
-        Isso evita que uma morte no meio da resolucao deixe um alvo escolhido antes invalido.
+        A morte muda distancias (um alvo escolhido antes pode ficar invalido) e revela
+        um papel, o que muda a crenca do agente.
         """
         while self._still_resolving(state, seat) and self.engine.pending_dice(state):
-            assignment = self._choose_next_assignment(state, seat)
-            state = self.engine.resolve_one(state, seat, assignment)
+            decision = self.agent.choose_assignments(build_observation(state, seat))
+            since = state.next_event_id
+            alive = len(state.alive_players())
+            for assignment in decision.action:
+                state = self.engine.resolve_one(state, seat, assignment)
+                if not self._still_resolving(state, seat) or len(state.alive_players()) < alive:
+                    break
+            self._annotate(state, since, seat, decision, (EventType.SHOT, EventType.BEER))
 
         if self._still_resolving(state, seat):
             state = self.engine.resolve(state, seat, [])
         return state
 
-    def _choose_rerolls(self, state: EngineState, seat: int) -> set[int]:
-        me = state.players[seat]
-        reroll = set()
-        for die in state.turn.dice:
-            if not die.can_reroll:
-                continue
-            if die.face is DiceFace.ARROW:
-                reroll.add(die.index)
-            elif die.face is DiceFace.BEER and me.life == me.max_life:
-                reroll.add(die.index)
-        return reroll
-
-    def _choose_next_assignment(self, state: EngineState, seat: int) -> Assignment:
-        pending = self.engine.pending_dice(state)
-        index = min(pending, key=lambda i: (RESOLUTION_ORDER[state.turn.dice[i].face], i))
-        face = state.turn.dice[index].face
-        candidates = valid_targets(state, seat, face)
-        if face is DiceFace.BEER:
-            target = self._choose_beer_target(state, seat, candidates)
-        else:
-            target = self.policy.rank_targets(state, seat, candidates)[0]
-        return Assignment(dice_index=index, target_seat=target)
-
-    def _choose_beer_target(self, state: EngineState, seat: int, candidates: list[int]) -> int:
-        me = state.players[seat]
-        if me.identity in (IdentityDTO.ASSISTENTE, IdentityDTO.RENEGADO):
-            sheriff = next((p for p in state.players if p.identity is IdentityDTO.XERIFE), None)
-            if sheriff and sheriff.seat in candidates and sheriff.life < sheriff.max_life and me.life > 2:
-                return sheriff.seat
-        return seat
+    def _annotate(
+        self,
+        state: EngineState,
+        since: int,
+        seat: int,
+        decision: Decision,
+        types: tuple[EventType, ...],
+    ) -> None:
+        """Grava o motivo e a confianca da decisao nos eventos que ela gerou."""
+        for i, event in enumerate(state.events):
+            if event.id >= since and event.actor_seat == seat and event.type in types:
+                # Troca o evento em vez de alterar: eventos sao compartilhados entre copias do estado
+                state.events[i] = replace(
+                    event,
+                    data={
+                        **event.data,
+                        "reason": decision.reason,
+                        "confidence": round(decision.confidence, 3),
+                    },
+                )
 
     def _still_rolling(self, state: EngineState, seat: int) -> bool:
         return (

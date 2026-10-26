@@ -1,10 +1,12 @@
 import random
 from uuid import uuid4
 
+from app.bot.agent import BayesAgent
 from app.dtos.character import CharacterDTO
 from app.dtos.dice import DiceShowDTO
 from app.dtos.game_state import (
     CreateAuthoritativeGameDTO,
+    DifficultyDTO,
     ExecuteShotsCommandDTO,
     GameStateDTO,
     PublicPlayerDTO,
@@ -32,7 +34,6 @@ from app.engine.view import build_observation
 from app.services.belief_service import BeliefService
 from app.services.bot_turn_runner import BotTurnRunner
 from app.services.game_errors import GameNotFound, NotYourTurn, StaleVersion
-from app.services.policy_service import ShotPolicyService
 
 MAX_BOT_TURNS = 50
 
@@ -56,6 +57,7 @@ _DICE_SHOW = {
 
 class GameService:
     _games: dict[str, EngineState] = {}
+    _difficulties: dict[str, DifficultyDTO] = {}
 
     def __init__(self):
         self.engine = GameEngine()
@@ -107,7 +109,7 @@ class GameService:
         state = self._get_game(game_id)
         self._check_version(state, cmd.expected_version)
         since = self._last_event_id(state) if cmd.since_event_id is None else cmd.since_event_id
-        runner = BotTurnRunner(self.engine, ShotPolicyService())
+        runner = self._bot_runner(game_id)
         for _ in range(max_turns):
             if state.status is GameStatus.DONE or not state.current_player.is_bot:
                 break
@@ -129,6 +131,7 @@ class GameService:
             str(uuid4()), specs, random.Random(), command.shuffle_roles
         )
         self._games[state.game_id] = state
+        self._difficulties[state.game_id] = DifficultyDTO(command.difficulty)  # o DTO guarda o valor
         return self.to_public_state(state)
 
     def get_state(self, game_id: str) -> GameStateDTO:
@@ -168,8 +171,7 @@ class GameService:
         if self._still_acting(state, seat, TurnPhase.ROLLING):
             self.engine.stop_rolling(state, seat)
         if self._still_acting(state, seat, TurnPhase.RESOLVING):
-            runner = BotTurnRunner(self.engine, ShotPolicyService())
-            state = runner.resolve_pending(state, seat)
+            state = self._bot_runner(game_id).resolve_pending(state, seat)
         self._games[game_id] = state
         return self.to_public_state(state)
 
@@ -177,8 +179,7 @@ class GameService:
         state = self._get_game(game_id)
         if not state.current_player.is_bot:
             raise ValueError(f"Jogador {state.current_player.user_name} nao e um bot")
-        runner = BotTurnRunner(self.engine, ShotPolicyService())
-        self._games[game_id] = runner.play_turn(state)
+        self._games[game_id] = self._bot_runner(game_id).play_turn(state)
         return self.to_public_state(self._games[game_id])
 
     # ---------- visao por jogador ----------
@@ -407,6 +408,10 @@ class GameService:
         )
 
     # ---------- utilidades ----------
+
+    def _bot_runner(self, game_id: str) -> BotTurnRunner:
+        difficulty = self._difficulties.get(game_id, DifficultyDTO.MEDIO)
+        return BotTurnRunner(self.engine, BayesAgent(self.engine, difficulty))
 
     def _command(
         self, game_id: str, actor_user_id: int, expected_version: int

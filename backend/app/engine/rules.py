@@ -2,7 +2,7 @@ import random
 from collections.abc import Iterable
 from dataclasses import dataclass
 
-from app.dtos.character import IdentityDTO, TeamDTO
+from app.dtos.character import IdentityDTO
 from app.engine.dice import DICE_COUNT, DYNAMITE_LIMIT, FACES, GATLING_MIN, MAX_ROLLS, DiceFace
 from app.engine.errors import RuleViolation
 from app.engine.events import EventType, GameEvent
@@ -16,6 +16,7 @@ from app.engine.state import (
     TurnPhase,
     TurnState,
 )
+from app.engine.victory import winner_for
 
 TARGETED_FACES = (DiceFace.SHOT_1, DiceFace.SHOT_2, DiceFace.BEER)
 RESOLUTION_ORDER = {DiceFace.SHOT_1: 0, DiceFace.SHOT_2: 1, DiceFace.BEER: 2}
@@ -160,12 +161,15 @@ class GameEngine:
         if RESOLUTION_ORDER[face] != next_order:
             raise RuleViolation("Resolva os dados na ordem 1, 2 e Cerveja")
 
-        if assignment.target_seat not in valid_targets(draft, seat, face):
+        targets = valid_targets(draft, seat, face)
+        if assignment.target_seat not in targets:
             raise RuleViolation(f"Alvo invalido para o dado {assignment.dice_index}")
 
+        # Os alvos validos sao publicos (geometria da mesa). O bot usa para saber
+        # entre quais opcoes o jogador escolheu, e assim inferir o papel dele.
         draft.turn.dice[assignment.dice_index].resolved = True
         if face is DiceFace.BEER:
-            self._heal(draft, seat, assignment.target_seat)
+            self._heal(draft, seat, assignment.target_seat, targets)
         else:
             self._emit(
                 draft,
@@ -173,6 +177,7 @@ class GameEngine:
                 actor_seat=seat,
                 target_seat=assignment.target_seat,
                 amount=1,
+                data={"valid_target_seats": targets},
             )
             self._damage(draft, seat, assignment.target_seat, 1)
 
@@ -249,11 +254,20 @@ class GameEngine:
             if player.seat != seat:
                 self._damage(state, seat, player.seat, 1)
 
-    def _heal(self, state: EngineState, seat: int, target_seat: int) -> None:
+    def _heal(
+        self, state: EngineState, seat: int, target_seat: int, valid_target_seats: list[int]
+    ) -> None:
         target = state.players[target_seat]
         healed = min(1, target.max_life - target.life)
         target.life += healed
-        self._emit(state, EventType.BEER, actor_seat=seat, target_seat=target_seat, amount=healed)
+        self._emit(
+            state,
+            EventType.BEER,
+            actor_seat=seat,
+            target_seat=target_seat,
+            amount=healed,
+            data={"valid_target_seats": valid_target_seats},
+        )
 
     def _damage(self, state: EngineState, source_seat: int | None, target_seat: int, amount: int) -> None:
         target = state.players[target_seat]
@@ -276,19 +290,12 @@ class GameEngine:
     def _check_winner(self, state: EngineState) -> None:
         if state.status is GameStatus.DONE:
             return
-        alive = state.alive_players()
-        sheriff_alive = any(p.identity is IdentityDTO.XERIFE for p in alive)
-        enemies_alive = any(
-            p.identity in (IdentityDTO.FORA_DA_LEI, IdentityDTO.RENEGADO) for p in alive
+        winner = winner_for(
+            [p.seat for p in state.alive_players()], {p.seat: p.identity for p in state.players}
         )
-
-        if not sheriff_alive:
-            only_renegade = len(alive) == 1 and alive[0].identity is IdentityDTO.RENEGADO
-            state.winner = TeamDTO.RENEGADO if only_renegade else TeamDTO.FORA_DA_LEI
-        elif not enemies_alive:
-            state.winner = TeamDTO.XERIFE
-        else:
+        if winner is None:
             return
+        state.winner = winner
         state.status = GameStatus.DONE
         self._emit(state, EventType.VICTORY, data={"winner": state.winner.value})
 

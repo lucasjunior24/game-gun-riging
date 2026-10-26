@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Optional
 from pydantic import Field
 
@@ -36,10 +37,17 @@ class GameStateDTO(BaseDTO):
     arrows_in_pile: int = Field(default=9)
 
 
+class DifficultyDTO(Enum):
+    FACIL = "facil"
+    MEDIO = "medio"
+    DIFICIL = "dificil"
+
+
 class CreateAuthoritativeGameDTO(BaseDTO):
     player_name: str = Field(default="Lucas")
     players_total: int = Field(default=5)
     shuffle_roles: bool = Field(default=False)
+    difficulty: DifficultyDTO = Field(default=DifficultyDTO.MEDIO)
 
 
 class ShootDistanceCommandDTO(BaseDTO):

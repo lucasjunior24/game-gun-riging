@@ -3,12 +3,12 @@ from dataclasses import FrozenInstanceError
 
 import pytest
 
+from app.bot.agent import BayesAgent
 from app.dtos.character import IdentityDTO
 from app.engine.rules import GameEngine
 from app.engine.state import GameStatus
 from app.engine.view import build_observation
 from app.services.bot_turn_runner import BotTurnRunner
-from app.services.policy_service import ShotPolicyService
 
 from conftest import make_specs
 
@@ -87,7 +87,8 @@ def test_observacao_e_imutavel():
 
 def test_propriedade_nenhuma_observacao_vaza_papel_em_partidas_inteiras():
     engine = GameEngine()
-    runner = BotTurnRunner(engine, ShotPolicyService(model_path="missing-shot-policy-model.pt"))
+    # 1 amostra: aqui so importa a observacao, nao a qualidade das jogadas
+    runner = BotTurnRunner(engine, BayesAgent(engine, seed=0, n_samples=1))
     for seed in range(200):
         total = 4 + seed % 5
         state = engine.new_game(
