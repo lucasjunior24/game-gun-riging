@@ -26,3 +26,29 @@ coverage:
 
 deploy-nginx:
 	docker-compose -f compose/compose-local/nginx.yaml up
+# ---------- Fase 5: simulador e treino (experimentos, nao sao testes de CI) ----------
+GAMES ?= 1000
+PLAYERS ?= 5
+AGENT ?= bayes:medio
+OUT ?= results/sim.jsonl
+
+sim:
+	python -m app.sim.run --games $(GAMES) --players $(PLAYERS) --agent $(AGENT) --belief --out $(OUT)
+
+report:
+	python -m app.sim.report $(OUT)
+
+compare:
+	python -m app.sim.compare --a $(A) --b $(B) --games $(GAMES) --players $(PLAYERS)
+
+tune-belief:
+	python -m app.sim.tune belief --games $(GAMES) --players $(PLAYERS)
+
+tune-eval:
+	python -m app.sim.tune eval --games $(GAMES) --players $(PLAYERS)
+
+dataset:
+	python -m app.sim.dataset --games $(GAMES) --players 4,5,6,7,8 --out $(DATA)
+
+train-value:
+	python -m app.sim.train_value $(DATA)

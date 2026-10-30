@@ -1,10 +1,11 @@
 import random
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Generic, Protocol, TypeVar
 
 from app.bot.belief import Belief, infer
 from app.bot.determinize import determinize
-from app.bot.evaluation import Evaluator, utility_scale
+from app.bot.evaluation import DEFAULT_PARAMS, EvalParams, Evaluator, utility_scale
 from app.bot.likelihood import LikelihoodModel, SoftmaxLikelihood
 from app.bot.reroll import RerollOption, estimate_reroll_values
 from app.bot.resolution import Plan, resolution_options
@@ -12,6 +13,7 @@ from app.bot.selection import pick
 from app.dtos.game_state import DifficultyDTO
 from app.engine.dice import DiceFace
 from app.engine.rules import Assignment, GameEngine
+from app.engine.state import EngineState
 from app.engine.view import PlayerObservation
 
 A = TypeVar("A")
@@ -37,7 +39,18 @@ class Decision(Generic[A]):
     alternatives: list[tuple[A, float]] = field(default_factory=list)  # top 3, para depuracao
 
 
+class StateEvaluator(Protocol):
+    def value(self, state: EngineState) -> float: ...
+
+
+# (crenca, meu assento, observacao) -> avaliador. O padrao e o `Evaluator` escrito a mao;
+# a Fase 5 troca pela rede de valor (app/bot/value_eval.py).
+EvaluatorFactory = Callable[[Belief, int, PlayerObservation], StateEvaluator]
+
+
 class Agent(Protocol):
+    name: str
+
     def choose_reroll(self, obs: PlayerObservation) -> Decision[set[int] | None]: ...
 
     def choose_assignments(self, obs: PlayerObservation) -> Decision[list[Assignment]]: ...
@@ -56,16 +69,24 @@ class BayesAgent:
         seed: int | None = None,
         model: LikelihoodModel | None = None,
         n_samples: int = REROLL_SAMPLES,
+        params: EvalParams = DEFAULT_PARAMS,
+        evaluator_factory: EvaluatorFactory | None = None,
+        name: str | None = None,
     ):
         self.engine = engine or GameEngine()
         self.difficulty = difficulty
         self.rng = random.Random(seed)
         self.model = model or SoftmaxLikelihood()
         self.n_samples = n_samples
+        self.params = params
+        self.evaluator_factory = evaluator_factory or (
+            lambda belief, me, obs: Evaluator(belief, me, params)
+        )
+        self.name = name or f"bayes:{difficulty.name.lower()}"
 
     def choose_reroll(self, obs: PlayerObservation) -> Decision[set[int] | None]:
         belief = infer(obs, self.model)
-        evaluator = Evaluator(belief, obs.viewer_seat)
+        evaluator = self.evaluator_factory(belief, obs.viewer_seat, obs)
         scores = estimate_reroll_values(
             obs, belief, evaluator.value, self.engine, self.rng, self.n_samples
         )
@@ -81,7 +102,7 @@ class BayesAgent:
 
     def choose_assignments(self, obs: PlayerObservation) -> Decision[list[Assignment]]:
         belief = infer(obs, self.model)
-        evaluator = Evaluator(belief, obs.viewer_seat)
+        evaluator = self.evaluator_factory(belief, obs.viewer_seat, obs)
         # Dano e cura nao dependem dos papeis: simula uma vez, no mundo mais provavel,
         # e so a avaliacao (Evaluator) faz a media sobre todos os mundos.
         state = determinize(obs, belief.most_likely(), random.Random(self.rng.random()))
@@ -103,7 +124,7 @@ class BayesAgent:
         )
 
     def _temperature(self, obs: PlayerObservation) -> float:
-        return TEMPERATURES[self.difficulty] * utility_scale(len(obs.players))
+        return TEMPERATURES[self.difficulty] * utility_scale(len(obs.players), self.params)
 
 
 def _as_set(option: RerollOption) -> set[int] | None:
